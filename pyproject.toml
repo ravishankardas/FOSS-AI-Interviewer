@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "ai-interviewer"
+version = "0.1.0"
+description = "Open source AI interviewer — STT → LLM → TTS pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+dependencies = [
+    "pdfminer.six",
+    "faster-whisper",
+    "llama-cpp-python",
+    "piper-tts",
+    "silero-vad",
+    "torch",
+    "numpy",
+    "sounddevice",
+    "pyyaml",
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "websockets",
+]
+
+[project.optional-dependencies]
+cuda = ["llama-cpp-python[cuda]"]
+metal = ["llama-cpp-python[metal]"]
+
+[project.scripts]
+ai-interviewer = "ai_interviewer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ai_interviewer*", "backend*"]
