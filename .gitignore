@@ -225,3 +225,5 @@ reports/
 *.onnx
 frontend/node_modules/
 frontend/dist/
+docs/
+store.py
