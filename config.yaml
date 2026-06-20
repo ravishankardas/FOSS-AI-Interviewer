@@ -1,29 +1,24 @@
+interview:
+  answer_time_limit: 120
+  follow_up_enabled: true
+  max_questions: 10
 llm:
   model_path: models/Llama-3.2-3B-Instruct-Q4_K_M.gguf
   n_ctx: 4096
   n_gpu_layers: 0
   temperature: 0.7
-
-stt:
-  model_size: base  # tiny | base | small | medium | large
-  device: cpu       # cpu | cuda
-
-tts:
-  voice: en_US-lessac-medium
-  speed: 1.0
-
-vad:
-  threshold: 0.5
-  min_speech_duration_ms: 250
-  silence_duration_ms: 600
-  sample_rate: 16000
-  chunk_size: 512
-
-interview:
-  max_questions: 10
-  answer_time_limit: 120  # seconds, 0 = unlimited
-  follow_up_enabled: true
-
 server:
   host: 0.0.0.0
   port: 8000
+stt:
+  device: cpu
+  model_size: base
+tts:
+  speed: 1.0
+  voice: en_US-lessac-medium
+vad:
+  chunk_size: 512
+  min_speech_duration_ms: 250
+  sample_rate: 16000
+  silence_duration_ms: 600
+  threshold: 0.5
