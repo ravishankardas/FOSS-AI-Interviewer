@@ -81,6 +81,29 @@ def generate_questions(resume: ResumeData, cfg: InterviewConfig, llm: Any) ->Lis
     return [Question(text=q['text'], topic=q['topic']) for q in data]
 
 
+def generate_followup(question: Question, answer: str, llm: Any) -> Question:
+
+    system = f"""
+        You are a technical interviewer. Given a question and the candidate's answer,
+        generate one follow-up question that digs deeper into their response.
+        Return only JSON: {{"text": "...", "topic": "skills|experience|projects|education"}}
+        No markdown, no explanation.
+    """
+    prompt = f"""
+        The original question was: {question.text} on the topic: {question.topic}.
+        The candidate's answer is: {answer}
+    """
+
+    response = llm.complete(prompt=prompt, system= system)
+
+    cleaned = response.strip()
+    cleaned = cleaned[cleaned.find("{"):cleaned.rfind("}") + 1]
+
+    data = json.loads(cleaned)
+
+    return Question(text=data['text'], topic=data['topic'])
+
+
 
 if __name__ == "__main__":
     from .config import load_config
@@ -97,6 +120,12 @@ if __name__ == "__main__":
 
     
     # start_time = time.time()
+
+    question = Question(text = 'you architected and deployed a production speech-to-speech voice bot using Pipecat. Could you walk me through the overall architecture of this system and highlight some of the key design decisions you made to achieve the reported call reduction and KYC turnaround improvements?', topic= 'experience')
+    
+    follow = generate_followup(question, "I used FastAPI with WebSockets for real-time communication", llm)
+    print(follow)
+    
     # questions = generate_questions(resume, cfg.interview, llm)
     # logger.info(f"generated questions in: {time.time() - start_time} seconds")
     
