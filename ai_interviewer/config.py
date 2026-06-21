@@ -8,6 +8,8 @@ class LLMConfig:
     n_ctx: int = 2048
     n_gpu_layers: int = 0
     temperature: float = 0.7
+    provider: str = "local"
+    model_name: str = "gemini-2.5-flash"
 
 
 @dataclass

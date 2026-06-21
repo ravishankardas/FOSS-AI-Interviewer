@@ -1,7 +1,9 @@
-from pdfminer.high_level import extract_text
+from pdfminer.high_level import extract_text # type: ignore
 from dataclasses import dataclass, field
-from typing import List
-from .llm import LLMClient
+from typing import List, Any
+from .llm import create_llm
+import os
+
 import json
 import time
 store = {
@@ -60,7 +62,7 @@ SYSTEM_PROMPT = """
 """
 
 
-def parse_resume(pdf_path: str, llm: LLMClient) -> ResumeData:
+def parse_resume(pdf_path: str, llm: Any) -> ResumeData:
     if pdf_path in store:
         data = store[pdf_path]
     else:
@@ -70,6 +72,7 @@ def parse_resume(pdf_path: str, llm: LLMClient) -> ResumeData:
         if cleaned.startswith("```"):
             cleaned = cleaned[cleaned.find("{"):cleaned.rfind("}") + 1]
         data = json.loads(cleaned)
+        store[pdf_path] = data
 
     return ResumeData(
         name=data.get("name", ""),
@@ -85,15 +88,15 @@ def parse_resume(pdf_path: str, llm: LLMClient) -> ResumeData:
 if __name__ == "__main__":
     from .config import load_config
     cfg = load_config("config.yaml")
-    pdf_path = 'docs\\Ravi_AI.pdf'
-   
-    llm = LLMClient(cfg=cfg.llm)
+    pdf_path = os.path.join(os.getcwd(), "docs/Ravi_AI.pdf")
+    
+    llm = create_llm(cfg=cfg.llm)
     start_time = time.time()
     resp = parse_resume(pdf_path, llm)
     end_time = time.time()
     print(f"time_taken: {round(end_time - start_time, 2)} seconds\n")
-    print(resp)
-
+    from pprint import pprint
+    pprint(resp)
 
 
 
