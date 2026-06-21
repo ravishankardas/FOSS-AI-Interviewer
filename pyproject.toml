@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-interviewer"
@@ -36,3 +36,9 @@ ai-interviewer = "ai_interviewer.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ai_interviewer*", "backend*"]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::pytest.PytestCacheWarning",
+]
