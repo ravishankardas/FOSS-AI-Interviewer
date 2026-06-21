@@ -44,6 +44,8 @@ SYSTEM_PROMPT = """
 
 def _resume_to_text(resume: ResumeData):
 
+    alphabet_list = [chr(ord('a') + i) for i in range(0, 26)]
+
     lines = []
     lines.append(f"Name: {resume.name}")
     lines.append(f"Skills: {', '.join(resume.skills)}")
@@ -52,16 +54,16 @@ def _resume_to_text(resume: ResumeData):
     for idx, exp in enumerate(resume.experience):
         lines.append(f"  {idx+1}. {exp['title']} at {exp['company']}({exp['duration']})")
         for i, b in enumerate(exp.get('bullets', [])):
-            lines.append(f"    ({chr(ord('a') + i)}) {b}")
+            lines.append(f"    ({alphabet_list[i]}) {b}")
 
     
     lines.append("Projects:")
     for idx, proj in enumerate(resume.projects):
-        lines.append(f"  ({chr(ord('a') + idx)}) {proj['name']} using {', '.join(proj.get('tech',[]))}")
+        lines.append(f"  ({alphabet_list[idx]}) {proj['name']} using {', '.join(proj.get('tech',[]))}")
 
     lines.append("Education:")
     for idx, edu in enumerate(resume.education):
-        lines.append(f"  ({chr(ord('a') + idx)}) {edu['degree']} from {edu['institution']}")
+        lines.append(f"  ({alphabet_list[idx]}) {edu['degree']} from {edu['institution']}")
 
     return "\n".join(lines)
 
@@ -87,17 +89,18 @@ if __name__ == "__main__":
     
     llm = create_llm(cfg=cfg.llm)
 
-    start_time = time.time()
-    resume = parse_resume(pdf_path, llm)
-    logger.info(f"parsed resume in: {time.time() - start_time} seconds")
+
+    # start_time = time.time()
+    # resume = parse_resume(pdf_path, llm)
+    # logger.info(f"parsed resume in: {time.time() - start_time} seconds")
 
 
     
-    start_time = time.time()
-    questions = generate_questions(resume, cfg.interview, llm)
-    logger.info(f"generated questions in: {time.time() - start_time} seconds")
+    # start_time = time.time()
+    # questions = generate_questions(resume, cfg.interview, llm)
+    # logger.info(f"generated questions in: {time.time() - start_time} seconds")
     
-    print(questions)
+    # print(questions)
 
 
 
