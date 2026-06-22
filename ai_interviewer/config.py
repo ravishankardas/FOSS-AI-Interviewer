@@ -31,7 +31,7 @@ class VADConfig:
     min_speech_duration_ms: int = 250
     silence_duration_ms: int = 600
     sample_rate: int = 16000
-    chunk_size: int = 512
+    chunk_size: int = 1536
 
 
 @dataclass

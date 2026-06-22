@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
         print("Recording...")
         audio = sd.rec(int(duration * sample_rate), samplerate = sample_rate, channels=1, dtype='float32', device=1)
-        sd.wait(duration + 2)
+        sd.wait(timeout = duration + 2)
         audio = audio.flatten()
         print("Done")
 

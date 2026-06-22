@@ -47,3 +47,5 @@ librosa
 
 sounddevice
 piper-tts
+
+silero-vad
