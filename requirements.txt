@@ -41,3 +41,8 @@ PyYAML
 requests
 
 websockets
+
+faster-whisper
+librosa
+
+sounddevice

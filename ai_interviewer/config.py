@@ -1,4 +1,4 @@
-import yaml
+import yaml # type: ignore
 from dataclasses import dataclass, field
 
 
@@ -14,7 +14,7 @@ class LLMConfig:
 
 @dataclass
 class STTConfig:
-    model_size: str = "base"
+    model_path: str = "base"
     device: str = "cpu"
 
 

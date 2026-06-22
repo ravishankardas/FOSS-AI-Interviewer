@@ -228,3 +228,6 @@ frontend/dist/
 docs/
 store.py
 CLAUDE.md
+venv_wsl
+
+handover.md
