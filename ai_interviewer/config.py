@@ -22,6 +22,7 @@ class STTConfig:
 class TTSConfig:
     voice: str = "en_US-lessac-medium"
     speed: float = 1.0
+    model_path: str = "models/en/en_US/lessac/medium/en_US-lessac-medium.onnx"
 
 
 @dataclass

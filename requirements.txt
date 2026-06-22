@@ -46,3 +46,4 @@ faster-whisper
 librosa
 
 sounddevice
+piper-tts

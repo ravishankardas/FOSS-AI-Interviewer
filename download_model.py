@@ -44,7 +44,7 @@ def update_stt_config(model_name):
     config_path = "config.yaml"
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-    config["stt"]["model_size"] = model_name
+    config["stt"]["model_path"] = model_name
     logger.info("updating the stt_model path in config")
     with open(config_path, "w") as f:
         yaml.dump(config, f)
@@ -61,7 +61,37 @@ def get_whisper_model_name(system_ram):
         model_name = "large-v3"
 
     return model_name
- 
+
+
+def download_tts_model():
+
+    local_dir = "models/"
+
+    file_name = f"{local_dir}en/en_US/lessac/medium/en_US-lessac-medium.onnx"
+    file_name_json = f"{file_name}.json"
+    repo_id = "rhasspy/piper-voices"
+
+    if os.path.exists(file_name) and os.path.exists(file_name_json):
+        logger.info("TTS model already exists, skipping...")
+        return
+    
+    hf_hub_download(
+        repo_id = repo_id,
+        filename = file_name,
+        local_dir = local_dir
+    )
+
+    hf_hub_download(
+        repo_id=repo_id,
+        filename=file_name_json,
+        local_dir=local_dir
+    )
+
+    logger.info("TTS model downloaded successfully")
+
+
+
+                    
 if __name__ == "__main__":
     system_ram_in_gb = math.ceil(psutil.virtual_memory().total / (1024 ** 3))
     # repo_id, file_name = pick_model(system_ram_in_gb)
@@ -69,6 +99,8 @@ if __name__ == "__main__":
     # update_config(local_path)
 
 
-    whisper_model = get_whisper_model_name(system_ram_in_gb)
-    logger.info(f"whisper_model: {whisper_model}")
-    update_stt_config(whisper_model)
+    # whisper_model = get_whisper_model_name(system_ram_in_gb)
+    # logger.info(f"whisper_model: {whisper_model}")
+    # update_stt_config(whisper_model)
+
+    download_tts_model()

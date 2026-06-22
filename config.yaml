@@ -18,6 +18,7 @@ stt:
 tts:
   speed: 1.0
   voice: en_US-lessac-medium
+  model_path: models/en/en_US/lessac/medium/en_US-lessac-medium.onnx
 vad:
   chunk_size: 512
   min_speech_duration_ms: 250
