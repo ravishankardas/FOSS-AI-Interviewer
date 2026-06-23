@@ -1,12 +1,14 @@
 from typing import Iterator
-from llama_cpp import Llama
 from .config import LLMConfig
 import os
+import sys
 from google import genai # type: ignore
 from dotenv import load_dotenv # type: ignore
 from loguru import logger # type: ignore
 
 load_dotenv(".env")
+
+from llama_cpp import Llama
 
 class LocalLLMClient:
     def __init__(self, cfg: LLMConfig):
@@ -67,7 +69,8 @@ def create_llm(cfg: LLMConfig):
     if cfg.provider == "gemini":
         logger.info("using gemini llm")
         return GeminiLLMClient(cfg)
-    return LocalLLMClient(cfg)
+    logger.info("using local llm")
+    return LocalLLMClient(cfg) # type: ignore
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 interview:
   answer_time_limit: 120
   follow_up_enabled: true
-  max_questions: 10
+  max_questions: 2
 llm:
   model_name: gemini-2.5-flash
   model_path: models/Llama-3.2-3B-Instruct-Q4_K_M.gguf
@@ -14,14 +14,14 @@ server:
   port: 8000
 stt:
   device: cpu
-  model_path: small
+  model_path: medium
 tts:
-  speed: 1.0
+  speed: 1
   voice: en_US-lessac-medium
   model_path: models/en/en_US/lessac/medium/en_US-lessac-medium.onnx
 vad:
   chunk_size: 512
   min_speech_duration_ms: 250
   sample_rate: 16000
-  silence_duration_ms: 600
+  silence_duration_ms: 2000
   threshold: 0.5

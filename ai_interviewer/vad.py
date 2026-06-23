@@ -11,7 +11,7 @@ class LocalVADModel():
         self.sample_rate = cfg.sample_rate
         self.chunk_size = cfg.chunk_size
         self.model = load_silero_vad()
-        self.iterator = VADIterator(self.model, sampling_rate = self.sample_rate, threshold = self.threshold)
+        self.iterator = VADIterator(self.model, sampling_rate=self.sample_rate, threshold=self.threshold, min_silence_duration_ms=self.silence_duration_ms)
 
     def is_speech(self, chunk: np.ndarray) -> bool:
 

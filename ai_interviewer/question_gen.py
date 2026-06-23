@@ -21,6 +21,7 @@ SYSTEM_PROMPT = """
   Given a candidate's resume, generate exactly {n} interview questions.
 
   Rules:
+  - Generate only simple questions
   - Questions must be specific to the candidate's resume, not generic
   - Cover a mix of skills, experience, and projects
   - Ask about real things on their resume (specific technologies, companies,

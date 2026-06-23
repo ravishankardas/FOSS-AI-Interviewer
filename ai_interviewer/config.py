@@ -36,7 +36,7 @@ class VADConfig:
 
 @dataclass
 class InterviewConfig:
-    max_questions: int = 10
+    max_questions: int = 2
     answer_time_limit: int = 120
     follow_up_enabled: bool = True
 
