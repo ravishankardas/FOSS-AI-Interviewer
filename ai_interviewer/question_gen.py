@@ -38,8 +38,7 @@ SYSTEM_PROMPT = """
   - Every question must be complete, do not cut off mid-sentence
   - Generate all {n} questions, do not stop early
 
-  Format: [{{"text": "question here", "topic":
-  "skills|experience|projects|education"}}]
+  Format: [{{"text": "question here", "topic": "skills|experience|projects|education"}}]
   """
 
 def _resume_to_text(resume: ResumeData):
