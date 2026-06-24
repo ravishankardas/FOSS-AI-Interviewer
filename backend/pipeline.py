@@ -1,11 +1,11 @@
 from ai_interviewer.llm import GeminiLLMClient, create_llm
 from ai_interviewer.config import AppConfig, load_config
-from ai_interviewer.report import InterviewReport, evaluate_answer, generate_report
+from ai_interviewer.report import InterviewReport, evaluate_answer, generate_report, to_markdown
 from ai_interviewer.tts import LocalTTSClient
 from ai_interviewer.stt import LocalSTTClient
 from ai_interviewer.vad import LocalVADModel
 from ai_interviewer.parser import parse_resume
-from ai_interviewer.question_gen import generate_questions, Question
+from ai_interviewer.question_gen import generate_questions, Question, generate_followup
 from typing import Any
 from loguru import logger # type: ignore
 
@@ -17,6 +17,7 @@ import wave
 import json
 import os
 
+from datetime import datetime
 QUESTIONS_CACHE = "questions_cache.json"
 
 
@@ -103,9 +104,27 @@ class InterviewPipeline:
             eval = evaluate_answer(question, answer, self.llm)
             answers.append(eval)
 
+            if self.cfg.interview.follow_up_enabled:
+                followup = generate_followup(question, answer, self.llm)
+                logger.info(f"Follow-up [{followup.topic}]: {followup.text}")
+                self.speak(followup.text)
+                followup_answer = self.listen()
+                logger.info(f"Follow-up answer received: {followup_answer}")
+                followup_eval = evaluate_answer(followup, followup_answer, self.llm)
+                answers.append(followup_eval)
+
         logger.info("Generating final report...")
         report = generate_report(candidate_name, answers, self.llm)
         logger.info(f"Report generated. Recommendation: {report.recommendation}")
+        
+        os.makedirs("reports", exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_path = f"reports/{candidate_name}_{timestamp}.md"
+        with open(report_path, "w") as f:
+            f.write(to_markdown(report))
+        
+        logger.info(f"Report saved to {report_path}")       
+
 
         return report
 
