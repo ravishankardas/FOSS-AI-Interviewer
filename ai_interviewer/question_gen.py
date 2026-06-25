@@ -8,11 +8,18 @@ from .parser import ResumeData, parse_resume
 from .config import InterviewConfig
 from typing import Any, List
 from pprint import pprint
+from pydantic import BaseModel # type: ignore
 from loguru import logger # type: ignore
 
 
 @dataclass
 class Question:
+    text: str
+    topic: str
+
+
+# Schemas for Gemini structured output (native JSON mode).
+class _QuestionSchema(BaseModel):
     text: str
     topic: str
 
@@ -72,12 +79,9 @@ def generate_questions(resume: ResumeData, cfg: InterviewConfig, llm: Any) ->Lis
     resume_text = _resume_to_text(resume)
 
     system = SYSTEM_PROMPT.format(n = cfg.max_questions)
-    response = llm.complete(prompt = resume_text, system = system)
+    response = llm.complete(prompt = resume_text, system = system, response_schema = list[_QuestionSchema])
 
-    cleaned = response.strip()
-    cleaned = cleaned[cleaned.find("["):cleaned.rfind("]") + 1]
-
-    data = json.loads(cleaned)
+    data = json.loads(response)
     return [Question(text=q['text'], topic=q['topic']) for q in data]
 
 
@@ -94,12 +98,9 @@ def generate_followup(question: Question, answer: str, llm: Any) -> Question:
         The candidate's answer is: {answer}
     """
 
-    response = llm.complete(prompt=prompt, system= system)
+    response = llm.complete(prompt=prompt, system= system, response_schema = _QuestionSchema)
 
-    cleaned = response.strip()
-    cleaned = cleaned[cleaned.find("{"):cleaned.rfind("}") + 1]
-
-    data = json.loads(cleaned)
+    data = json.loads(response)
 
     return Question(text=data['text'], topic=data['topic'])
 

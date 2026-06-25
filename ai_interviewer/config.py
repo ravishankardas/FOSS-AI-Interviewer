@@ -31,7 +31,7 @@ class VADConfig:
     min_speech_duration_ms: int = 250
     silence_duration_ms: int = 600
     sample_rate: int = 16000
-    chunk_size: int = 1536
+    chunk_size: int = 512  # Silero VAD on Windows only accepts 512 @ 16kHz
 
 
 @dataclass

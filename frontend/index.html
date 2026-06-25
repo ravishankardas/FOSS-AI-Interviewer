@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FOSS AI Interviewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="frame">
+    <header class="topbar">
+      <span class="wordmark">FOSS&nbsp;Interviewer</span>
+      <span class="topbar-meta">voice&nbsp;·&nbsp;technical&nbsp;screen</span>
+    </header>
+
+    <!-- ───────────────── SETUP ───────────────── -->
+    <section id="setup" class="stage">
+      <p class="eyebrow">Voice interview</p>
+      <h1 class="display">
+        You'll be asked. <em>Out loud.</em>
+      </h1>
+      <p class="lede">
+        Drop in your resume and your name. The interviewer reads it, then
+        speaks its questions, you answer by talking, the same as a real screen.
+      </p>
+
+      <form id="callsheet" class="callsheet" autocomplete="on">
+        <div class="field">
+          <label for="name">Name</label>
+          <input id="name" type="text" placeholder="Jane Doe" autocomplete="name" />
+        </div>
+        <div class="field">
+          <label for="resume">Resume · PDF</label>
+          <input id="resume" type="file" accept="application/pdf" />
+          <span id="filename" class="filehint">No file chosen</span>
+        </div>
+        <button id="start" type="submit" class="begin">
+          Begin <span aria-hidden="true">→</span>
+        </button>
+      </form>
+      <p class="micnote">You'll be asked for microphone access when it starts.</p>
+    </section>
+
+    <!-- ──────────────── INTERVIEW ──────────────── -->
+    <section id="interview" class="stage" hidden>
+      <div class="onair">
+        <span id="lamp" class="lamp" style="--lvl:0"></span>
+        <span id="onair-label" class="onair-label">Connecting</span>
+      </div>
+
+      <div id="wave" class="wave" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span>
+      </div>
+
+      <div id="speaker-tag" class="speaker-tag">&nbsp;</div>
+
+      <ol id="transcript" class="transcript"></ol>
+    </section>
+
+    <!-- ───────────────── REPORT ───────────────── -->
+    <section id="report" class="stage" hidden>
+      <p class="eyebrow">Assessment</p>
+      <div id="verdict" class="verdict" hidden></div>
+      <article id="report-body" class="dossier"></article>
+      <div class="report-actions">
+        <button id="download" type="button" class="begin download-btn">
+          Download PDF <span aria-hidden="true">↓</span>
+        </button>
+        <button id="restart" type="button" class="restart-btn">
+          New interview <span aria-hidden="true">↺</span>
+        </button>
+      </div>
+    </section>
+
+    <p id="error" class="error" role="alert" hidden></p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

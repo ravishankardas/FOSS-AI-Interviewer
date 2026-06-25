@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import os, uuid, shutil
 
 from ai_interviewer.config import load_config
@@ -91,4 +92,6 @@ async def ws_endpoint(ws: WebSocket, session_id: str):
         session.cleanup()
         sessions.pop(session_id, None)
 
-    
+
+# Serve the browser frontend. Mounted last so /upload and /ws win.
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

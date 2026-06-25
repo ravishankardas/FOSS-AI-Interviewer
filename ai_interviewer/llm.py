@@ -2,6 +2,8 @@ from typing import Iterator
 from .config import LLMConfig
 import os
 import sys
+import time
+import httpx # type: ignore
 from google import genai # type: ignore
 from dotenv import load_dotenv # type: ignore
 from loguru import logger # type: ignore
@@ -20,7 +22,9 @@ class LocalLLMClient:
         )
         self._temperature = cfg.temperature
 
-    def complete(self, prompt: str, system: str = "") -> str:
+    def complete(self, prompt: str, system: str = "", response_schema=None) -> str:
+        # response_schema is a no-op here: llama_cpp has no native structured
+        # output, so JSON callers must keep relying on prompt instructions.
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -48,19 +52,56 @@ class LocalLLMClient:
                 yield delta["content"]  # type: ignore
 
 
+# transport-level failures the genai SDK does NOT retry (it only retries on
+# HTTP status codes). These happen when an idle pooled socket is dropped.
+_TRANSIENT = (httpx.RemoteProtocolError, httpx.ConnectError, httpx.ReadError)
+
+
+def _with_retry(fn, *, attempts: int = 3, base_delay: float = 0.5):
+    """Call fn(), retrying transport-level connection drops with backoff."""
+    for attempt in range(1, attempts + 1):
+        try:
+            return fn()
+        except _TRANSIENT as exc:
+            if attempt == attempts:
+                raise
+            delay = base_delay * (2 ** (attempt - 1))
+            logger.warning(f"gemini transient error ({exc!r}), retry {attempt}/{attempts - 1} in {delay}s")
+            time.sleep(delay)
+
+
 class GeminiLLMClient:
     def __init__(self, cfg: LLMConfig):
-        self._client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        # disable keep-alive reuse: each call opens a fresh connection so we
+        # never reuse a socket the server dropped during an idle pause.
+        self._client = genai.Client(
+            api_key=os.environ["GEMINI_API_KEY"],
+            http_options=genai.types.HttpOptions(
+                client_args={"limits": httpx.Limits(max_keepalive_connections=0)},
+            ),
+        )
         self.model_name = cfg.model_name
 
-    def complete(self, prompt: str, system: str = "") -> str:
-        config = genai.types.GenerateContentConfig(system_instruction=system) if system else None
-        response = self._client.models.generate_content(model=self.model_name, contents=prompt, config=config)
+    def complete(self, prompt: str, system: str = "", response_schema=None) -> str:
+        config_kwargs = {}
+        if system:
+            config_kwargs["system_instruction"] = system
+        if response_schema is not None:
+            # native JSON mode: API guarantees valid, parseable JSON
+            config_kwargs["response_mime_type"] = "application/json"
+            config_kwargs["response_schema"] = response_schema
+        config = genai.types.GenerateContentConfig(**config_kwargs) if config_kwargs else None
+        response = _with_retry(
+            lambda: self._client.models.generate_content(model=self.model_name, contents=prompt, config=config)
+        )
         return response.text  # type: ignore
 
     def stream(self, prompt: str, system: str = "") -> Iterator[str]:
         config = genai.types.GenerateContentConfig(system_instruction=system) if system else None
-        for chunk in self._client.models.generate_content_stream(model=self.model_name, contents=prompt, config=config):
+        stream = _with_retry(
+            lambda: self._client.models.generate_content_stream(model=self.model_name, contents=prompt, config=config)
+        )
+        for chunk in stream:
             if chunk.text:
                 yield chunk.text
 

@@ -61,6 +61,10 @@ class InterviewPipeline:
               if speaking:
                   speech_chunks.append(chunk)
 
+      if not speech_chunks:
+          logger.info("No speech captured, returning empty answer")
+          return ""
+
       logger.info("Done listening, transcribing...")
       audio = np.concatenate(speech_chunks)
       return self.stt.transcribe(audio)

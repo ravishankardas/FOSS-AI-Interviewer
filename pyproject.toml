@@ -30,9 +30,6 @@ dependencies = [
 cuda = ["llama-cpp-python[cuda]"]
 metal = ["llama-cpp-python[metal]"]
 
-[project.scripts]
-ai-interviewer = "ai_interviewer.cli:main"
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ai_interviewer*", "backend*"]

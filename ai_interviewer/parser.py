@@ -2,6 +2,7 @@ from pdfminer.high_level import extract_text # type: ignore
 from dataclasses import dataclass, field
 from typing import List, Any
 from .llm import create_llm
+from pydantic import BaseModel # type: ignore
 import os
 
 import json
@@ -23,6 +24,35 @@ class ResumeData:
     experience: List[dict]
     projects: List[dict]
     education: List[dict]
+
+
+# Schemas for Gemini structured output (native JSON mode).
+class _ExperienceSchema(BaseModel):
+    title: str
+    company: str
+    duration: str
+    bullets: List[str]
+
+
+class _ProjectSchema(BaseModel):
+    name: str
+    tech: List[str]
+    bullets: List[str]
+
+
+class _EducationSchema(BaseModel):
+    degree: str
+    institution: str
+
+
+class _ResumeSchema(BaseModel):
+    name: str
+    email: str
+    phone: str
+    skills: List[str]
+    experience: List[_ExperienceSchema]
+    projects: List[_ProjectSchema]
+    education: List[_EducationSchema]
 
 
 SYSTEM_PROMPT = """
@@ -67,11 +97,8 @@ def parse_resume(pdf_path: str, llm: Any) -> ResumeData:
         data = store[pdf_path]
     else:
         text = get_text_from_pdf(pdf_path)
-        response = llm.complete(prompt=text, system=SYSTEM_PROMPT)
-        cleaned = response.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned[cleaned.find("{"):cleaned.rfind("}") + 1]
-        data = json.loads(cleaned)
+        response = llm.complete(prompt=text, system=SYSTEM_PROMPT, response_schema=_ResumeSchema)
+        data = json.loads(response)
         store[pdf_path] = data
 
     return ResumeData(

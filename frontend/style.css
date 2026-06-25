@@ -1,0 +1,386 @@
+:root {
+  --room:    #16130F;  /* dim study background      */
+  --surface: #1F1A14;  /* raised panels             */
+  --line:    #322a20;  /* hairline dividers         */
+  --ink:     #ECE6DA;  /* primary text (warm white) */
+  --muted:   #9B9183;  /* secondary text            */
+  --faint:   #6a6256;  /* tertiary / placeholders   */
+  --amber:   #E8A33D;  /* the on-air lamp — only accent */
+  --amber-d: #b97f27;
+
+  --serif: "Newsreader", Georgia, serif;
+  --grotesk: "Space Grotesk", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--room);
+  color: var(--ink);
+  font-family: var(--grotesk);
+  font-size: 16px;
+  line-height: 1.55;
+  /* faint vignette so the "room" has depth */
+  background-image: radial-gradient(120% 90% at 50% -10%, #221c14 0%, var(--room) 60%);
+  min-height: 100vh;
+}
+
+.frame {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 5rem;
+}
+
+/* ── topbar ───────────────────────────── */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.wordmark { color: var(--ink); font-weight: 500; }
+.topbar-meta { color: var(--faint); }
+
+.stage { padding-top: 3.5rem; }
+
+/* ── shared bits ──────────────────────── */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin: 0 0 1.25rem;
+}
+
+.display {
+  font-family: var(--grotesk);
+  font-weight: 500;
+  font-size: clamp(2.4rem, 7vw, 4.1rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.25rem;
+}
+.display em {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--amber);
+}
+
+.lede {
+  max-width: 46ch;
+  color: var(--muted);
+  font-size: 1.05rem;
+  margin: 0 0 2.5rem;
+}
+
+/* ── setup / call sheet ───────────────── */
+.callsheet {
+  border-top: 1px solid var(--line);
+}
+.field {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.field label {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.field input[type="text"] {
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  padding: 0.2rem 0;
+}
+.field input[type="text"]::placeholder { color: var(--faint); }
+.field input[type="text"]:focus { outline: none; }
+.field input[type="text"]:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 4px;
+}
+
+/* hide native file input, drive it via the label hint */
+.field input[type="file"] {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
+.filehint {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  color: var(--faint);
+  cursor: pointer;
+  border-bottom: 1px dashed var(--line);
+  width: max-content;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filehint.set { color: var(--ink); border-bottom-color: var(--amber-d); }
+
+.begin {
+  margin-top: 2rem;
+  background: var(--amber);
+  color: #1a1206;
+  border: none;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.95rem 1.6rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.begin span { transition: transform 0.2s ease; display: inline-block; }
+.begin:hover:not(:disabled) span { transform: translateX(4px); }
+.begin:hover:not(:disabled) { background: #f4b659; }
+.begin:disabled { opacity: 0.45; cursor: progress; }
+.begin:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+.micnote {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--faint);
+  margin-top: 1.25rem;
+}
+
+/* ── interview / on-air ───────────────── */
+#interview { text-align: center; }
+
+.onair {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 1.5rem 0 0.5rem;
+}
+.lamp {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--faint);
+  /* level (0..1) is fed from JS as --lvl */
+  transform: scale(calc(1 + var(--lvl) * 0.9));
+  transition: transform 0.08s linear, background 0.4s ease, box-shadow 0.2s ease;
+}
+.onair.live .lamp {
+  background: var(--amber);
+  box-shadow: 0 0 calc(10px + var(--lvl) * 40px) calc(2px + var(--lvl) * 8px)
+              rgba(232, 163, 61, 0.55);
+}
+.onair-label {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.onair.live .onair-label { color: var(--amber); }
+
+/* speaking waveform — animates while either party talks */
+.wave {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  height: 44px;
+  margin: 1.5rem 0 0.5rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.wave.active { opacity: 1; }
+.wave span {
+  width: 4px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--amber);
+  transform: scaleY(0.4);
+  /* base amplitude follows live audio level (--lvl, 0..1) */
+  transform-origin: center;
+}
+.wave.active span { animation: eq 0.9s ease-in-out infinite; }
+.wave span:nth-child(1) { animation-delay: 0s; }
+.wave span:nth-child(2) { animation-delay: 0.12s; }
+.wave span:nth-child(3) { animation-delay: 0.24s; }
+.wave span:nth-child(4) { animation-delay: 0.36s; }
+.wave span:nth-child(5) { animation-delay: 0.18s; }
+.wave span:nth-child(6) { animation-delay: 0.30s; }
+.wave span:nth-child(7) { animation-delay: 0.06s; }
+
+@keyframes eq {
+  0%, 100% { transform: scaleY(calc(0.4 + var(--lvl) * 0.6)); }
+  50%      { transform: scaleY(calc(1.2 + var(--lvl) * 2.2)); }
+}
+
+.speaker-tag {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--faint);
+  min-height: 1.6em;
+  margin-bottom: 2.5rem;
+}
+
+/* screenplay transcript */
+.transcript {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 54ch;
+  text-align: left;
+}
+.transcript .turn {
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 1rem;
+  opacity: 0;
+  animation: rise 0.4s ease forwards;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.turn .who {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 0.2rem;
+}
+.turn.you .who { color: var(--amber); }
+.turn .said {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.turn .said.pending { color: var(--faint); }
+.turn .said.pending::after {
+  content: "";
+  animation: dots 1.2s steps(4, end) infinite;
+}
+@keyframes dots { 0% { content: "·"; } 33% { content: "· ·"; } 66% { content: "· · ·"; } }
+
+/* ── report / dossier ─────────────────── */
+.verdict {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  border-radius: 2px;
+  margin-bottom: 1.75rem;
+}
+.verdict.no { border-color: var(--faint); color: var(--muted); }
+
+.dossier {
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  color: var(--ink);
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+}
+.dossier h1, .dossier h2, .dossier h3 {
+  font-family: var(--grotesk);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin: 1.8rem 0 0.6rem;
+}
+.dossier h1 { font-size: 1.7rem; }
+.dossier h2 { font-size: 1.3rem; }
+.dossier h3 { font-size: 1.05rem; color: var(--muted); }
+.dossier strong { color: var(--amber); font-weight: 500; }
+.dossier code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: var(--surface);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+}
+.dossier hr { border: none; border-top: 1px solid var(--line); margin: 1.5rem 0; }
+
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 2rem;
+}
+.report-actions .begin { margin-top: 0; }
+
+.restart-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.95rem 1.6rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.restart-btn:hover { color: var(--ink); border-color: var(--muted); }
+.restart-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+
+/* ── error ────────────────────────────── */
+.error {
+  margin-top: 2rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: #e8755d;
+  border-left: 2px solid #e8755d;
+  padding-left: 0.85rem;
+}
+
+/* ── responsive ───────────────────────── */
+@media (max-width: 520px) {
+  .field { grid-template-columns: 1fr; gap: 0.35rem; }
+  .turn { grid-template-columns: 1fr; gap: 0.3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── print: only the report, on white ──── */
+@media print {
+  body { background: #fff; color: #111; }
+  .topbar, #setup, #interview, .report-actions, .error { display: none !important; }
+  #report { background: #fff; padding: 0; margin: 0; }
+  .frame { max-width: 100%; padding: 0; }
+  .eyebrow { color: #555; }
+  .verdict { color: #111; border-color: #111; }
+  .dossier { color: #111; border-top-color: #ccc; }
+  .dossier strong { color: #111; }
+  .dossier h1, .dossier h2, .dossier h3 { color: #111; }
+  .dossier code { background: #f0f0f0; }
+  .dossier hr { border-top-color: #ccc; }
+}

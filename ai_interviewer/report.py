@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Any
 from .llm import create_llm
 from .question_gen import Question
+from pydantic import BaseModel # type: ignore
 import json
 
 @dataclass
@@ -20,6 +21,17 @@ class InterviewReport:
     overall_summary: str
     recommendation: str
 
+
+# Schemas for Gemini structured output (native JSON mode).
+class _EvalSchema(BaseModel):
+    score: int
+    feedback: str
+
+
+class _ReportSchema(BaseModel):
+    overall_summary: str
+    recommendation: str
+
 def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
     prompt = f"""
         question is : {question.text}
@@ -29,6 +41,16 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
     system = """
         You are an expert answer evaluator. Given the question, topic and the answer
         evaluate the answer based on the question. Give the score and your feedback
+
+        Scoring guidance (be lenient and encouraging):
+        - If the answer is relevant to the question and on-topic, the score must be
+          at least 6, even if it is brief or lacks detail.
+        - Reserve scores below 6 only for answers that are off-topic, empty, or do
+          not actually address the question.
+        - Reward concrete examples, metrics, and clear reasoning with higher scores
+          (8-10), but do not penalise an otherwise relevant answer harshly for
+          missing depth.
+
         Output format rules (strictly follow):
         - Return ONLY a JSON Dictionary, nothing else
         - Start your response with { and end with }
@@ -50,10 +72,8 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
             technical solution. Could mention trade-offs considered."}
     """
 
-    response = llm.complete(prompt = prompt, system = system)
-    cleaned = response.strip()
-    cleaned = cleaned[cleaned.find("{"):cleaned.rfind("}") + 1]
-    data = json.loads(cleaned)
+    response = llm.complete(prompt = prompt, system = system, response_schema = _EvalSchema)
+    data = json.loads(response)
     return AnswerEval(question=question.text, topic=question.topic, answer=answer, score=data['score'], feedback=data['feedback'])
 
 
@@ -91,10 +111,8 @@ def generate_report(candidate_name: str, evals: List[AnswerEval], llm: Any) -> I
     """
     
 
-    response = llm.complete(prompt = prompt, system = system)
-    cleaned = response.strip()
-    cleaned = cleaned[cleaned.find("{"):cleaned.rfind("}") + 1]
-    data = json.loads(cleaned)
+    response = llm.complete(prompt = prompt, system = system, response_schema = _ReportSchema)
+    data = json.loads(response)
     return InterviewReport(candidate_name = candidate_name, evaluations=evals, overall_summary=data['overall_summary'], recommendation=data['recommendation'])
 
 
