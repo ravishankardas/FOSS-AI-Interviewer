@@ -11,12 +11,17 @@ from ai_interviewer.tts import LocalTTSClient
 from backend.session import InterviewSession
 from backend.ws_handler import handle_interview
 
-UPLOAD_DIR = "uploads"
+# resolve paths relative to the repo root (parent of this backend package)
+# so the server works no matter which directory it's launched from
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 sessions = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    config = load_config("config.yaml")
+    config = load_config(CONFIG_PATH)
     llm = create_llm(config.llm)
     stt = LocalSTTClient(config.stt)
     tts = LocalTTSClient(config.tts)
@@ -94,4 +99,4 @@ async def ws_endpoint(ws: WebSocket, session_id: str):
 
 
 # Serve the browser frontend. Mounted last so /upload and /ws win.
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

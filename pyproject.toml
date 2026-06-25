@@ -9,11 +9,11 @@ description = "Open source AI interviewer — STT → LLM → TTS pipeline"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [{ name = "Ravi Shankar Das" }]
 
 dependencies = [
     "pdfminer.six",
     "faster-whisper",
-    "llama-cpp-python",
     "piper-tts",
     "silero-vad",
     "torch",
@@ -24,11 +24,20 @@ dependencies = [
     "uvicorn[standard]",
     "python-multipart",
     "websockets",
+    "google-genai",
+    "python-dotenv",
+    "loguru",
+    "pydantic",
 ]
 
 [project.optional-dependencies]
+# local LLM backend (provider: local). Needs a C/C++ toolchain to build.
+local = ["llama-cpp-python"]
 cuda = ["llama-cpp-python[cuda]"]
 metal = ["llama-cpp-python[metal]"]
+
+[project.scripts]
+ai-interviewer = "ai_interviewer.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

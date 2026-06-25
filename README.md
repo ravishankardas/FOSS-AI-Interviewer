@@ -54,6 +54,32 @@ CPU-only PyTorch (recommended unless you have CUDA set up):
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
+For the **local** `llama.cpp` LLM backend (needs a C/C++ toolchain to build):
+
+```bash
+pip install -e ".[local]"     # or ".[cuda]" / ".[metal]"
+```
+
+By default the project uses the Gemini backend, which doesn't need `llama-cpp-python`.
+
+### Quick start
+
+After installing, set up your LLM key and launch:
+
+```bash
+echo "GEMINI_API_KEY=your-key-here" > .env
+
+ai-interviewer --start
+```
+
+`ai-interviewer --start` runs the WebSocket server in the current terminal and opens the
+frontend in Chrome (`http://localhost:8000`). Use the browser to enter your name,
+upload a resume, and take the interview. Stop with `Ctrl+C`.
+
+```
+ai-interviewer --start [--host HOST] [--port PORT] [--no-browser]
+```
+
 ### Models
 
 - **STT** — `faster-whisper`, downloaded automatically (`medium` by default)
@@ -88,9 +114,19 @@ tts:
 
 ## Running
 
-### WebSocket server
+### Browser (recommended)
 
 ```bash
+ai-interviewer --start
+```
+
+Boots the server and opens the frontend in Chrome. See [Quick start](#quick-start).
+
+### WebSocket server (manual)
+
+```bash
+ai-interviewer --start --no-browser
+# or directly:
 venv\Scripts\python.exe -m uvicorn backend.main:app --port 8000
 ```
 
@@ -166,12 +202,13 @@ config.yaml
 
 ## Status
 
-- [x] Resume parsing, question generation, follow-ups
+- [x] Resume parsing, question generation
 - [x] VAD + STT + TTS + LLM pipeline (CLI)
 - [x] Report generation + markdown export
 - [x] WebSocket backend (tested end-to-end)
-- [ ] Browser frontend
-- [ ] Silence timeout while listening
+- [x] Browser frontend (`ai-interviewer --start`)
+- [x] Silence timeout while listening
+- [x] Background transcription/evaluation (overlapped with the interview)
 
 See `handover.md` for current working notes.
 

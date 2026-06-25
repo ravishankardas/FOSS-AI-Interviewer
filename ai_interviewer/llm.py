@@ -10,10 +10,12 @@ from loguru import logger # type: ignore
 
 load_dotenv(".env")
 
-from llama_cpp import Llama
 
 class LocalLLMClient:
     def __init__(self, cfg: LLMConfig):
+        # imported lazily so the default (gemini) path doesn't require
+        # llama-cpp-python to be installed
+        from llama_cpp import Llama  # type: ignore
         self._llm = Llama(
             model_path=cfg.model_path,
             n_ctx=cfg.n_ctx,
