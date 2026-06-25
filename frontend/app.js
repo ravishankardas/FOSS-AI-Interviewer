@@ -13,7 +13,7 @@ const lampEl = $("lamp");
 const waveEl = $("wave");
 const onairLabel = $("onair-label");
 const speakerTag = $("speaker-tag");
-const transcriptEl = $("transcript");
+const viewReportBtn = $("view-report");
 const verdictEl = $("verdict");
 const errorEl = $("error");
 
@@ -26,12 +26,12 @@ let streaming = false;      // send mic frames only while LISTENING
 let playbackChain = Promise.resolve();
 let ws = null;
 let candidateName = "Candidate";
+let pendingReport = null;    // report markdown, shown when "View report" is clicked
 
 // lamp level easing
 let targetLevel = 0;
 let shownLevel = 0;
 let rafId = null;
-let openTurnSaid = null;     // the <span.said> awaiting transcription
 
 // Worklet: batch float32 into CHUNK frames, report RMS for the lamp.
 const WORKLET_SRC = `
@@ -81,22 +81,6 @@ function stopLampLoop() {
   rafId = null;
   interviewEl.style.setProperty("--lvl", 0);
   waveActive(false);
-}
-
-// ── transcript ────────────────────────────────────────
-function addTurn(who, text, opts = {}) {
-  const li = document.createElement("li");
-  li.className = "turn" + (opts.you ? " you" : "");
-  const w = document.createElement("span");
-  w.className = "who";
-  w.textContent = who;
-  const said = document.createElement("span");
-  said.className = "said" + (opts.pending ? " pending" : "");
-  said.textContent = text;
-  li.append(w, said);
-  transcriptEl.append(li);
-  li.scrollIntoView({ behavior: "smooth", block: "end" });
-  return said;
 }
 
 // ── audio setup ───────────────────────────────────────
@@ -154,14 +138,6 @@ function playWav(arrayBuffer) {
       })
   );
   return playbackChain;
-}
-
-// Show only the first few sentences of a long transcript on screen.
-function shorten(text, maxSentences = 3) {
-  const trimmed = text.trim();
-  const sentences = trimmed.match(/[^.!?]+[.!?]+/g);
-  if (!sentences || sentences.length <= maxSentences) return trimmed;
-  return sentences.slice(0, maxSentences).join(" ").trim() + " …";
 }
 
 // ── safe-ish markdown ─────────────────────────────────
@@ -234,10 +210,6 @@ async function startInterview(e) {
       if (ev.data instanceof ArrayBuffer) {
         setLabel("On air");
         setSpeaker("The interviewer is speaking.");
-        if (!openTurnSaid || transcriptEl.lastElementChild?.dataset.who !== "int") {
-          addTurn("Interviewer", "asks a question aloud");
-          transcriptEl.lastElementChild.dataset.who = "int";
-        }
         waveActive(true);          // interviewer talking
         await playWav(ev.data);
         waveActive(false);
@@ -256,24 +228,26 @@ async function startInterview(e) {
           waveActive(true);           // candidate talking
           setLabel("Listening");
           setSpeaker("Your turn — answer out loud.");
-          openTurnSaid = addTurn(candidateName, "", { you: true, pending: true });
           break;
         case "listening_stop":
           streaming = false;
           waveActive(false);
           setLabel("On air");
           setSpeaker("Got it — thinking…");
-          if (openTurnSaid) openTurnSaid.classList.remove("pending");
           break;
         case "transcribed":
-          if (openTurnSaid) {
-            openTurnSaid.classList.remove("pending");
-            openTurnSaid.textContent = `“${shorten(msg.text)}”`;
-            openTurnSaid = null;
-          }
+          // transcripts are no longer shown live (kept server-side for the report)
           break;
         case "report":
-          finishInterview(msg.markdown);
+          // the report finished generating while the farewell played; only
+          // reveal the button once the farewell has actually finished.
+          pendingReport = msg.markdown;
+          streaming = false;
+          await playbackChain;
+          waveActive(false);
+          setLabel("Done");
+          setSpeaker("That's a wrap — thanks for your time!");
+          viewReportBtn.hidden = false;
           break;
         case "error":
           showError(msg.message);
@@ -319,6 +293,11 @@ fileInput.addEventListener("change", () => {
 });
 
 $("callsheet").addEventListener("submit", startInterview);
+
+// reveal the report (tears down audio/WS) once the candidate clicks
+viewReportBtn.addEventListener("click", () => {
+  if (pendingReport !== null) finishInterview(pendingReport);
+});
 
 // Download the report as PDF via the browser's print-to-PDF.
 // The document title seeds the default PDF filename.

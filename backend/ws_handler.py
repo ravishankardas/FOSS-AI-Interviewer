@@ -3,13 +3,14 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from ai_interviewer.config import AppConfig
 from ai_interviewer.parser import parse_resume
-from ai_interviewer.question_gen import Question, generate_followup, generate_questions
+from ai_interviewer.question_gen import Question, generate_questions
 from ai_interviewer.report import evaluate_answer, generate_report, to_markdown
 from .session import InterviewSession, SessionState
 import json
 import numpy as np
 import torch
 from fastapi import FastAPI
+from loguru import logger  # type: ignore
 
 
 async def run_in_executor(fn, *args):
@@ -28,46 +29,64 @@ async def _wait_for_start(ws: WebSocket, session: InterviewSession):
     data = json.loads(raw)
 
     if data.get("type") != "start":
-        await ws.send_json({"type": "error", "message": "exptected start"})
+        await ws.send_json({"type": "error", "message": "expected start"})
         raise WebSocketDisconnect(code=500)
     
     session.candidate_name = data.get("candidate_name", "Candidate")
     session.state = SessionState.STARTED
+    logger.info(f"[{session.session_id[:8]}] interview started for '{session.candidate_name}'")
 
-async def _ask_question(ws: WebSocket, session: InterviewSession, question: Question):
+async def _ask_question(ws: WebSocket, session: InterviewSession, question: Question, wav_bytes: bytes = None, turn: int = None):
     # set state = SPEAKING
-    # synthesize TTS in executor (tts.synthesize, question.text) → wav bytes
+    # synthesize TTS in executor (unless pre-rendered wav_bytes provided)
     # send wav bytes as binary
-    # send {"type": "listening"} json
-
+    # send {"type": "listening", "turn": turn} json
 
     session.state = SessionState.SPEAKING
-    wav_bytes = await run_in_executor(session.tts.synthesize, question.text)
+    logger.info(f"[{session.session_id[:8]}] asking: {question.text}")
+    if wav_bytes is None:
+        wav_bytes = await run_in_executor(session.tts.synthesize, question.text)
     await ws.send_bytes(data=wav_bytes)
 
-    await ws.send_json({"type": "listening"})
+    await ws.send_json({"type": "listening", "turn": turn})
 
-async def _listen_for_answer(ws: WebSocket, session: InterviewSession):
-    # state = LISTENING
-    # session.vad.reset()
-    # clear audio_buf, speech_samples; speech_started = False
-    # CHUNK_BYTES = cfg.vad.chunk_size * 4
-
+async def _capture_answer(ws: WebSocket, session: InterviewSession):
+    # capture the spoken answer via VAD and return the raw audio (no transcription).
+    # transcription happens later in the background STT worker so the candidate
+    # never waits on Whisper between questions.
+    sid = session.session_id[:8]
     session.state = SessionState.LISTENING
+    logger.info(f"[{sid}] listening for answer...")
     session.vad.reset()
     audio_buf = bytearray()
     speech_samples = []
     CHUNK_BYTES = session.cfg.vad.chunk_size * 4
     speech_started = False
+    speech_ended = False
 
+    # cap the whole answer turn so a silent candidate or a stalled stream
+    # can't hang the interview forever
+    loop = asyncio.get_event_loop()
+    deadline = loop.time() + session.cfg.interview.answer_time_limit
 
-    while True:
-        msg = await ws.receive()
-        if "bytes" not in msg:
+    while not speech_ended:
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            logger.info(f"[{sid}] answer timed out after {session.cfg.interview.answer_time_limit}s")
+            break
+
+        try:
+            msg = await asyncio.wait_for(ws.receive(), timeout=remaining)
+        except asyncio.TimeoutError:
+            logger.info(f"[{sid}] answer timed out after {session.cfg.interview.answer_time_limit}s")
+            break
+
+        if msg["type"] == "websocket.disconnect":
+            raise WebSocketDisconnect(msg.get("code", 1000))
+        if msg.get("bytes") is None:
             continue
 
         audio_buf.extend(msg["bytes"])
-        speech_ended = False
 
         while len(audio_buf) >= CHUNK_BYTES:
             raw = audio_buf[:CHUNK_BYTES]
@@ -83,49 +102,161 @@ async def _listen_for_answer(ws: WebSocket, session: InterviewSession):
 
             if speech_started:
                 speech_samples.append(chunk)
-            
+
             if speech_ended:
                 break
 
-        if speech_ended:
-            break
-
     await ws.send_json({"type": "listening_stop"})
 
-    audio = np.concatenate(speech_samples)
-    text = await run_in_executor(session.stt.transcribe, audio)
-    await ws.send_json({"type": "transcribed", "text": text})
-    return text
-    
+    if not speech_samples:
+        logger.info(f"[{sid}] no speech captured")
+        return None
 
-async def handle_interview(ws: WebSocket, session: InterviewSession):
+    return np.concatenate(speech_samples)
+
+
+async def _stt_worker(ws: WebSocket, session: InterviewSession, queue: asyncio.Queue, evals: dict):
+    # serialized worker: transcribe captured answers and evaluate them off the
+    # critical path. One at a time, since each transcription saturates the CPU.
+    sid = session.session_id[:8]
+    while True:
+        item = await queue.get()
+        try:
+            if item is None:
+                break  # sentinel: interview finished asking
+
+            turn, question, audio = item
+            if audio is None:
+                text = ""
+            else:
+                secs = len(audio) / session.cfg.vad.sample_rate
+                logger.info(f"[{sid}] (bg) transcribing turn {turn} ({secs:.1f}s)...")
+                text = await run_in_executor(session.stt.transcribe, audio)
+                logger.info(f"[{sid}] (bg) turn {turn} transcribed: {text!r}")
+
+            await ws.send_json({"type": "transcribed", "turn": turn, "text": text})
+
+            # question is None for the warm-up intro — transcribe but don't score
+            if question is not None and text.strip():
+                eval = await run_in_executor(evaluate_answer, question, text, session.llm)
+                logger.info(f"[{sid}] (bg) turn {turn} score: {eval.score}/10")
+                evals[turn] = eval
+        except Exception:
+            logger.exception(f"[{sid}] (bg) transcription/eval failed")
+        finally:
+            queue.task_done()
+
+GREETING = (
+    "Hi {name}, I am Vanya, your AI interviewer. "
+    "Could you please give me a brief introduction about yourself?"
+)
+
+FAREWELL = "Thank you for the interview, {name}. Best of luck with your results."
+
+
+async def _run_interview(ws: WebSocket, session: InterviewSession):
     await _wait_for_start(ws, session)
 
-    await ws.send_json({"type": "status", "message": "Parsing resume..."})
-    resume = await run_in_executor(parse_resume, session.resume_path, session.llm)
+    sid = session.session_id[:8]
 
-    await ws.send_json({"type": "status", "message": "Generating questions..."})
-    questions = await run_in_executor(generate_questions, resume, session.cfg.interview, session.llm)
+    # prepare the interview (resume parse + question gen + first-question TTS)
+    # in the background while the candidate gives their introduction
+    async def _prepare():
+        logger.info(f"[{sid}] (bg) parsing resume: {session.resume_path}")
+        resume = await run_in_executor(parse_resume, session.resume_path, session.llm)
+        logger.info(f"[{sid}] (bg) generating questions...")
+        questions = await run_in_executor(generate_questions, resume, session.cfg.interview, session.llm)
+        logger.info(f"[{sid}] (bg) generated {len(questions)} questions")
+        first_wav = None
+        if questions:
+            first_wav = await run_in_executor(session.tts.synthesize, questions[0].text)
+            logger.info(f"[{sid}] (bg) first question audio ready")
+        return questions, first_wav
 
-    for question in questions:
-        await _ask_question(ws, session, question)
-        answer = await _listen_for_answer(ws, session)
+    prep_task = asyncio.create_task(_prepare())
 
-        eval = await run_in_executor(evaluate_answer, question, answer, session.llm)
+    # background worker transcribes + evaluates answers off the critical path,
+    # keyed by turn so order is preserved for the report
+    evals: dict = {}
+    queue: asyncio.Queue = asyncio.Queue()
+    worker = asyncio.create_task(_stt_worker(ws, session, queue, evals))
+    turn = 0
 
-        session.evals.append(eval)
+    try:
+        # greet and capture the introduction (overlaps with prep_task)
+        logger.info(f"[{sid}] === introduction ===")
+        greeting = GREETING.format(name=session.candidate_name)
+        await _ask_question(ws, session, Question(text=greeting, topic="introduction"), turn=turn)
+        intro_audio = await _capture_answer(ws, session)
+        await queue.put((turn, None, intro_audio))  # warm-up: transcribe, don't score
+        turn += 1
 
-        if session.cfg.interview.follow_up_enabled:
-            followup = await run_in_executor(generate_followup, question, answer, session.llm)
-            await _ask_question(ws, session, followup)
-            followup_answer = await _listen_for_answer(ws, session)
-            followup_eval = await run_in_executor(evaluate_answer, followup, followup_answer, session.llm)
+        # by now the background prep is usually finished
+        questions, first_wav = await prep_task
 
-            session.evals.append(followup_eval)
+        answered = False
+        for idx, question in enumerate(questions, 1):
+            logger.info(f"[{sid}] === question {idx}/{len(questions)} ===")
+            await _ask_question(ws, session, question, wav_bytes=first_wav if idx == 1 else None, turn=turn)
+            audio = await _capture_answer(ws, session)
+            if audio is not None:
+                answered = True
+            # hand off transcription + eval; immediately move to the next question
+            await queue.put((turn, question, audio))
+            turn += 1
 
-    report = await run_in_executor(generate_report, session.candidate_name, session.evals, session.llm)
+        # speak the farewell now so its playback masks the final transcription,
+        # evaluation, and report generation that still have to finish
+        await ws.send_json({"type": "status", "message": "Wrapping up — scoring your answers…"})
+        if answered:
+            logger.info(f"[{sid}] speaking farewell")
+            farewell_wav = await run_in_executor(session.tts.synthesize, FAREWELL.format(name=session.candidate_name))
+            await ws.send_bytes(data=farewell_wav)
+
+        # drain the worker so all transcriptions/evals finish
+        logger.info(f"[{sid}] all questions asked, waiting for transcription/eval to finish...")
+        await queue.put(None)
+        await worker
+    finally:
+        # don't leak background tasks if the interview errors out mid-way
+        for task in (worker, prep_task):
+            if not task.done():
+                task.cancel()
+
+    ordered = [evals[k] for k in sorted(evals)]
+    if not ordered:
+        # every answer was empty / failed — nothing to report on
+        logger.info(f"[{sid}] no answers recorded, skipping report")
+        await ws.send_json({
+            "type": "error",
+            "message": "No answers were recorded, so there's nothing to evaluate. Please try again.",
+        })
+        return
+
+    # report generation also overlaps with the farewell playback on the client
+    logger.info(f"[{sid}] generating report from {len(ordered)} evals...")
+    report = await run_in_executor(generate_report, session.candidate_name, ordered, session.llm)
 
     await ws.send_json({"type": "report", "markdown": to_markdown(report)})
+    logger.info(f"[{sid}] interview complete, report sent")
+
+
+async def handle_interview(ws: WebSocket, session: InterviewSession):
+    try:
+        await _run_interview(ws, session)
+    except WebSocketDisconnect:
+        raise  # client went away; let the endpoint clean up
+    except Exception:
+        # any LLM/STT/TTS failure: tell the browser and end cleanly instead
+        # of crashing the socket with an unhandled traceback.
+        logger.exception("interview failed")
+        try:
+            await ws.send_json({
+                "type": "error",
+                "message": "The interview hit an unexpected error and had to stop. Please try again.",
+            })
+        except Exception:
+            pass
 
 
 

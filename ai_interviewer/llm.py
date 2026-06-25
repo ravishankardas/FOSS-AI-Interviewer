@@ -83,21 +83,26 @@ class GeminiLLMClient:
         self.model_name = cfg.model_name
 
     def complete(self, prompt: str, system: str = "", response_schema=None) -> str:
-        config_kwargs = {}
+        # disable model "thinking" — these are simple structured tasks and the
+        # thinking phase adds several seconds of latency for no benefit.
+        config_kwargs = {"thinking_config": genai.types.ThinkingConfig(thinking_budget=0)}
         if system:
             config_kwargs["system_instruction"] = system
         if response_schema is not None:
             # native JSON mode: API guarantees valid, parseable JSON
             config_kwargs["response_mime_type"] = "application/json"
             config_kwargs["response_schema"] = response_schema
-        config = genai.types.GenerateContentConfig(**config_kwargs) if config_kwargs else None
+        config = genai.types.GenerateContentConfig(**config_kwargs)
         response = _with_retry(
             lambda: self._client.models.generate_content(model=self.model_name, contents=prompt, config=config)
         )
         return response.text  # type: ignore
 
     def stream(self, prompt: str, system: str = "") -> Iterator[str]:
-        config = genai.types.GenerateContentConfig(system_instruction=system) if system else None
+        config_kwargs = {"thinking_config": genai.types.ThinkingConfig(thinking_budget=0)}
+        if system:
+            config_kwargs["system_instruction"] = system
+        config = genai.types.GenerateContentConfig(**config_kwargs)
         stream = _with_retry(
             lambda: self._client.models.generate_content_stream(model=self.model_name, contents=prompt, config=config)
         )

@@ -2,10 +2,12 @@ from faster_whisper import WhisperModel # type: ignore
 import yaml # type: ignore
 from .config import STTConfig
 import numpy as np
+import os
 
 class LocalSTTClient():
     def __init__(self, cfg: STTConfig) -> None:
-        self.model = WhisperModel(cfg.model_path, device = cfg.device, compute_type="int8")
+        cpu_threads = cfg.cpu_threads or (os.cpu_count() or 0)
+        self.model = WhisperModel(cfg.model_path, device = cfg.device, compute_type="int8", cpu_threads=cpu_threads)
     
     def transcribe(self, audio: np.ndarray) -> str:
 

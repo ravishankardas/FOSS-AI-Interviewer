@@ -1,7 +1,7 @@
 interview:
   answer_time_limit: 120
   follow_up_enabled: true
-  max_questions: 2
+  max_questions: 1
 llm:
   model_name: gemini-2.5-flash
   model_path: models/Llama-3.2-3B-Instruct-Q4_K_M.gguf

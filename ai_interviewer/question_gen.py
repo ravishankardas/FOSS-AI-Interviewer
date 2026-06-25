@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import json
 import os
+import random
 import time
 
 from .llm import create_llm
@@ -82,7 +83,9 @@ def generate_questions(resume: ResumeData, cfg: InterviewConfig, llm: Any) ->Lis
     response = llm.complete(prompt = resume_text, system = system, response_schema = list[_QuestionSchema])
 
     data = json.loads(response)
-    return [Question(text=q['text'], topic=q['topic']) for q in data]
+    questions = [Question(text=q['text'], topic=q['topic']) for q in data]
+    random.shuffle(questions)
+    return questions
 
 
 def generate_followup(question: Question, answer: str, llm: Any) -> Question:

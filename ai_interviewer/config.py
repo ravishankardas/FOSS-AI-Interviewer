@@ -16,6 +16,7 @@ class LLMConfig:
 class STTConfig:
     model_path: str = "base"
     device: str = "cpu"
+    cpu_threads: int = 0  # 0 = use all available cores
 
 
 @dataclass
