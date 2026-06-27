@@ -6,7 +6,7 @@ import os, uuid, shutil
 
 from ai_interviewer.config import load_config
 from ai_interviewer.llm import create_llm
-from ai_interviewer.stt import LocalSTTClient
+from ai_interviewer.stt import create_stt
 from ai_interviewer.tts import LocalTTSClient
 from backend.session import InterviewSession
 from backend.ws_handler import handle_interview
@@ -23,7 +23,7 @@ sessions = {}
 async def lifespan(app: FastAPI):
     config = load_config(CONFIG_PATH)
     llm = create_llm(config.llm)
-    stt = LocalSTTClient(config.stt)
+    stt = create_stt(config.stt)
     tts = LocalTTSClient(config.tts)
 
     app.state.cfg = config
@@ -67,7 +67,7 @@ async def upload(file: UploadFile):
         cfg=app.state.cfg,
         llm=app.state.llm,
         stt=app.state.stt,
-        tts=app.state.tts
+        tts=app.state.tts,
     )
 
     return {'session_id': session_id}

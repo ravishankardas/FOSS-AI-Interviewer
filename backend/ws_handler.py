@@ -3,10 +3,11 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from ai_interviewer.config import AppConfig
 from ai_interviewer.parser import parse_resume
-from ai_interviewer.question_gen import Question, generate_questions
+from ai_interviewer.question_gen import Question, generate_questions, generate_followup
 from ai_interviewer.report import evaluate_answer, generate_report, to_markdown
 from .session import InterviewSession, SessionState
 import json
+import random
 import numpy as np
 import torch
 from fastapi import FastAPI
@@ -125,8 +126,11 @@ async def _stt_worker(ws: WebSocket, session: InterviewSession, queue: asyncio.Q
             if item is None:
                 break  # sentinel: interview finished asking
 
-            turn, question, audio = item
-            if audio is None:
+            turn, question, audio, text = item
+            if text is not None:
+                # already transcribed on the critical path (to ground a follow-up)
+                pass
+            elif audio is None:
                 text = ""
             else:
                 secs = len(audio) / session.cfg.vad.sample_rate
@@ -152,6 +156,14 @@ GREETING = (
 )
 
 FAREWELL = "Thank you for the interview, {name}. Best of luck with your results."
+
+# spoken the instant an answer ends, so its playback masks the STT + Gemini + TTS
+# latency of transcribing the answer and producing the follow-up question
+FILLERS = [
+    "Mm, interesting. Let me dig into that a little.",
+    "Got it. I'd like to go a bit deeper there.",
+    "Okay, that's helpful. Let me follow up on that.",
+]
 
 
 async def _run_interview(ws: WebSocket, session: InterviewSession):
@@ -188,7 +200,7 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
         greeting = GREETING.format(name=session.candidate_name)
         await _ask_question(ws, session, Question(text=greeting, topic="introduction"), turn=turn)
         intro_audio = await _capture_answer(ws, session)
-        await queue.put((turn, None, intro_audio))  # warm-up: transcribe, don't score
+        await queue.put((turn, None, intro_audio, None))  # warm-up: transcribe, don't score
         turn += 1
 
         # by now the background prep is usually finished
@@ -201,9 +213,28 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
             audio = await _capture_answer(ws, session)
             if audio is not None:
                 answered = True
-            # hand off transcription + eval; immediately move to the next question
-            await queue.put((turn, question, audio))
+
+            do_followup = session.cfg.interview.follow_up_enabled and audio is not None
+            answer_text = None
+            if do_followup:
+                # filler plays on the client while we transcribe (Groq ~2s) and
+                # generate the follow-up, masking that latency
+                filler_wav = await run_in_executor(session.tts.synthesize, random.choice(FILLERS))
+                await ws.send_bytes(data=filler_wav)
+                answer_text = await run_in_executor(session.stt.transcribe, audio)
+                logger.info(f"[{sid}] grounding follow-up on: {answer_text!r}")
+
+            # hand off eval (reuse answer_text if we already transcribed it)
+            await queue.put((turn, question, audio, answer_text))
             turn += 1
+
+            if do_followup and answer_text and answer_text.strip():
+                followup = await run_in_executor(generate_followup, question, answer_text, session.llm)
+                logger.info(f"[{sid}] --- follow-up [{followup.topic}]: {followup.text}")
+                await _ask_question(ws, session, followup, turn=turn)
+                fu_audio = await _capture_answer(ws, session)
+                await queue.put((turn, followup, fu_audio, None))
+                turn += 1
 
         # speak the farewell now so its playback masks the final transcription,
         # evaluation, and report generation that still have to finish

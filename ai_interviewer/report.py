@@ -101,6 +101,16 @@ def generate_report(candidate_name: str, evals: List[AnswerEval], llm: Any) -> I
         You are an expert summary generator and final recommendation master.
         Given the evaluation of a candidate for an interview, give me an overall summary and
         final recommendation: STRONG_HIRE|LEAN_HIRE|NO_HIRE
+
+        Base the recommendation on the average of the per-question scores. Use this
+        rubric and do NOT be harsher than it:
+        - average score >= 8           -> STRONG_HIRE
+        - average score between 6 and 8 -> LEAN_HIRE
+        - average score < 6            -> NO_HIRE
+        A candidate scoring 6 or 7 across questions is a LEAN_HIRE, not a NO_HIRE.
+        Reserve NO_HIRE for genuinely weak interviews (mostly off-topic or low scores).
+        The summary should be fair and constructive, consistent with this recommendation.
+
         Output format rules (strictly follow):
         - Return ONLY a JSON Dictionary, nothing else
         - Start your response with {{ and end with }}

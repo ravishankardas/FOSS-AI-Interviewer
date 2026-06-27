@@ -14,9 +14,11 @@ class LLMConfig:
 
 @dataclass
 class STTConfig:
-    model_path: str = "base"
+    provider: str = "local"            # local | groq
+    model_path: str = "base"           # local faster-whisper model
     device: str = "cpu"
-    cpu_threads: int = 0  # 0 = use all available cores
+    cpu_threads: int = 0               # 0 = use all available cores
+    model_name: str = "whisper-large-v3"  # groq model id
 
 
 @dataclass

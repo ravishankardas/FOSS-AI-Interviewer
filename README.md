@@ -4,8 +4,9 @@ An open-source, voice-based AI interviewer. It parses a candidate's resume,
 conducts a spoken interview over a **STT → LLM → TTS** pipeline, and produces a
 structured hiring report at the end.
 
-Runs locally on CPU (GPU optional). Pluggable LLM backend — local `llama.cpp`
-or Gemini.
+Runs locally on CPU (GPU optional). Pluggable backends — the **LLM** is local
+`llama.cpp` or Gemini, and **STT** is local `faster-whisper` or hosted Groq
+(`whisper-large-v3`) with automatic fallback to local Whisper.
 
 ---
 
@@ -17,9 +18,12 @@ Resume (PDF) ──► parse ──► generate questions
                                   ▼
         ┌─────────────  interview loop  ─────────────┐
         │  TTS speaks question  (Piper)               │
-        │  mic audio ──► VAD (Silero) ──► STT (Whisper)│
+        │  mic audio ──► VAD (Silero) ──► STT (Groq/   │
+        │                                  Whisper)    │
         │  answer ──► LLM evaluates ──► score+feedback │
-        │  optional follow-up question                 │
+        │  grounded follow-up: re-transcribe the answer│
+        │  and ask a deeper question (filler masks the │
+        │  latency while it's produced)                │
         └──────────────────────────────────────────────┘
                                   │
                                   ▼
@@ -68,9 +72,13 @@ After installing, set up your LLM key and launch:
 
 ```bash
 echo "GEMINI_API_KEY=your-key-here" > .env
+# optional: hosted STT (fast + accurate). Falls back to local Whisper if unset/down.
+echo "GROQ_API_KEY=your-key-here" >> .env
 
 ai-interviewer --start
 ```
+
+> The `.env` is read relative to the working directory — launch from the repo root.
 
 `ai-interviewer --start` runs the WebSocket server in the current terminal and opens the
 frontend in Chrome (`http://localhost:8000`). Use the browser to enter your name,
@@ -82,7 +90,9 @@ ai-interviewer --start [--host HOST] [--port PORT] [--no-browser]
 
 ### Models
 
-- **STT** — `faster-whisper`, downloaded automatically (`medium` by default)
+- **STT** — hosted Groq `whisper-large-v3` (`provider: groq`, needs `GROQ_API_KEY`),
+  or local `faster-whisper` (`provider: local`, `medium` by default, downloaded
+  automatically). Groq automatically falls back to local Whisper on any failure.
 - **VAD** — `silero-vad`, downloaded automatically
 - **TTS** — Piper voice files under `models/en/en_US/lessac/medium/`
 - **LLM** — either a local GGUF model under `models/`, or set `provider: gemini`
@@ -102,7 +112,9 @@ llm:
   provider: gemini            # gemini | local
   model_name: gemini-2.5-flash
 stt:
-  model_path: medium
+  provider: groq              # groq | local
+  model_name: whisper-large-v3  # groq model id
+  model_path: medium          # local faster-whisper model (fallback)
 vad:
   chunk_size: 512             # must be 512 at 16kHz on Windows
   silence_duration_ms: 2000
@@ -181,7 +193,7 @@ ai_interviewer/        core pipeline (pip package)
   parser.py            PDF → ResumeData
   question_gen.py      questions + follow-ups
   vad.py               Silero VAD
-  stt.py               faster-whisper
+  stt.py               local Whisper / Groq client + fallback
   llm.py               local / Gemini client
   tts.py               Piper TTS
   report.py            evaluation + markdown report
@@ -209,6 +221,8 @@ config.yaml
 - [x] Browser frontend (`ai-interviewer --start`)
 - [x] Silence timeout while listening
 - [x] Background transcription/evaluation (overlapped with the interview)
+- [x] Hosted Groq STT with automatic local-Whisper fallback (provider toggle)
+- [x] Grounded follow-up questions (filler phrase masks the produce latency)
 
 See `handover.md` for current working notes.
 

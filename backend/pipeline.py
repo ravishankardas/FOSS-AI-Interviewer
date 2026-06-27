@@ -2,7 +2,7 @@ from ai_interviewer.llm import GeminiLLMClient, create_llm
 from ai_interviewer.config import AppConfig, load_config
 from ai_interviewer.report import InterviewReport, evaluate_answer, generate_report, to_markdown
 from ai_interviewer.tts import LocalTTSClient
-from ai_interviewer.stt import LocalSTTClient
+from ai_interviewer.stt import LocalSTTClient, create_stt
 from ai_interviewer.vad import LocalVADModel
 from ai_interviewer.parser import parse_resume
 from ai_interviewer.question_gen import generate_questions, Question, generate_followup
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     
     cfg = load_config("config.yaml")
     llm = create_llm(cfg.llm)
-    stt = LocalSTTClient(cfg.stt)
+    stt = create_stt(cfg.stt)
     tts = LocalTTSClient(cfg.tts)
     vad = LocalVADModel(cfg.vad)
 

@@ -1,7 +1,6 @@
 import math
 import os
 import yaml # type: ignore
-import psutil # type: ignore
 from loguru import logger # type: ignore
 from huggingface_hub import hf_hub_download # type: ignore
 
@@ -93,6 +92,7 @@ def download_tts_model():
 
                     
 if __name__ == "__main__":
+    import psutil  # type: ignore  # only needed for RAM-based model picking
     system_ram_in_gb = math.ceil(psutil.virtual_memory().total / (1024 ** 3))
     # repo_id, file_name = pick_model(system_ram_in_gb)
     # local_path = download_model(repo_id, file_name)
