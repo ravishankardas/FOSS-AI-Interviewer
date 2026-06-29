@@ -108,6 +108,26 @@ def generate_followup(question: Question, answer: str, llm: Any) -> Question:
     return Question(text=data['text'], topic=data['topic'])
 
 
+def generate_followup_stream(question: Question, answer: str, llm: Any):
+    """Stream a follow-up question's text token by token.
+
+    Plain text, not JSON — structured output can't be streamed cleanly, and the
+    spoken question only needs the text. The caller reuses the parent question's
+    topic for scoring.
+    """
+    system = (
+        "You are a technical interviewer. Given a question and the candidate's "
+        "answer, ask one spoken follow-up question that digs deeper into their "
+        "response. Reply with ONLY the question text — no preamble, no JSON, no "
+        "markdown."
+    )
+    prompt = f"""
+        The original question was: {question.text} on the topic: {question.topic}.
+        The candidate's answer is: {answer}
+    """
+    return llm.stream(prompt=prompt, system=system)
+
+
 
 if __name__ == "__main__":
     from .config import load_config

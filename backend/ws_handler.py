@@ -3,11 +3,11 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from ai_interviewer.config import AppConfig
 from ai_interviewer.parser import parse_resume
-from ai_interviewer.question_gen import Question, generate_questions, generate_followup
+from ai_interviewer.question_gen import Question, generate_questions, generate_followup_stream
 from ai_interviewer.report import evaluate_answer, generate_report, to_markdown
+from ai_interviewer.sentence_splitter import SentenceSplitter
 from .session import InterviewSession, SessionState
 import json
-import random
 import numpy as np
 import torch
 from fastapi import FastAPI
@@ -17,6 +17,55 @@ from loguru import logger  # type: ignore
 async def run_in_executor(fn, *args):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, fn, *args)
+
+
+async def _aiter_blocking(make_gen):
+    # bridge a blocking generator (the LLM token stream) onto the event loop:
+    # run it in a thread and hand tokens back through an asyncio.Queue so we can
+    # synthesize+send each sentence while the LLM is still producing the next.
+    loop = asyncio.get_event_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+    SENTINEL = object()
+
+    def worker():
+        try:
+            for token in make_gen():
+                loop.call_soon_threadsafe(queue.put_nowait, token)
+        except Exception as exc:
+            loop.call_soon_threadsafe(queue.put_nowait, exc)
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, SENTINEL)
+
+    loop.run_in_executor(None, worker)
+    while True:
+        item = await queue.get()
+        if item is SENTINEL:
+            break
+        if isinstance(item, Exception):
+            raise item
+        yield item
+
+
+async def _speak_stream(ws: WebSocket, session: InterviewSession, make_gen) -> str:
+    # consume an LLM token stream, synthesizing and sending TTS one sentence at a
+    # time so playback starts on the first sentence instead of the whole answer.
+    # returns the full spoken text (for scoring).
+    session.state = SessionState.SPEAKING
+    splitter = SentenceSplitter()
+    parts: list[str] = []
+
+    async def _say(sentence: str):
+        wav = await run_in_executor(session.tts.synthesize, sentence)
+        await ws.send_bytes(data=wav)
+
+    async for token in _aiter_blocking(make_gen):
+        parts.append(token)
+        for sentence in splitter.feed(token):
+            await _say(sentence)
+    for sentence in splitter.flush():
+        await _say(sentence)
+
+    return "".join(parts).strip()
 
 
 
@@ -157,14 +206,6 @@ GREETING = (
 
 FAREWELL = "Thank you for the interview, {name}. Best of luck with your results."
 
-# spoken the instant an answer ends, so its playback masks the STT + Gemini + TTS
-# latency of transcribing the answer and producing the follow-up question
-FILLERS = [
-    "Mm, interesting. Let me dig into that a little.",
-    "Got it. I'd like to go a bit deeper there.",
-    "Okay, that's helpful. Let me follow up on that.",
-]
-
 
 async def _run_interview(ws: WebSocket, session: InterviewSession):
     await _wait_for_start(ws, session)
@@ -217,10 +258,8 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
             do_followup = session.cfg.interview.follow_up_enabled and audio is not None
             answer_text = None
             if do_followup:
-                # filler plays on the client while we transcribe (Groq ~2s) and
-                # generate the follow-up, masking that latency
-                filler_wav = await run_in_executor(session.tts.synthesize, random.choice(FILLERS))
-                await ws.send_bytes(data=filler_wav)
+                # transcribe on the critical path to ground the follow-up. Groq is
+                # near-instant; the streamed follow-up below masks the rest.
                 answer_text = await run_in_executor(session.stt.transcribe, audio)
                 logger.info(f"[{sid}] grounding follow-up on: {answer_text!r}")
 
@@ -229,10 +268,18 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
             turn += 1
 
             if do_followup and answer_text and answer_text.strip():
-                followup = await run_in_executor(generate_followup, question, answer_text, session.llm)
-                logger.info(f"[{sid}] --- follow-up [{followup.topic}]: {followup.text}")
-                await _ask_question(ws, session, followup, turn=turn)
+                # stream the follow-up: LLM tokens → sentences → TTS, sentence by
+                # sentence, so the candidate hears the first sentence while the
+                # rest is still being generated. Replaces the old filler hack.
+                logger.info(f"[{sid}] --- streaming follow-up...")
+                followup_text = await _speak_stream(
+                    ws, session,
+                    lambda q=question, a=answer_text: generate_followup_stream(q, a, session.llm),
+                )
+                logger.info(f"[{sid}] --- follow-up spoken: {followup_text!r}")
+                await ws.send_json({"type": "listening", "turn": turn})
                 fu_audio = await _capture_answer(ws, session)
+                followup = Question(text=followup_text, topic=question.topic)
                 await queue.put((turn, followup, fu_audio, None))
                 turn += 1
 
