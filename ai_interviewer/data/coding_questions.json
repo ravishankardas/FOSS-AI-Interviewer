@@ -5,6 +5,10 @@
     "difficulty": "easy",
     "prompt": "Read a line of space-separated integers, then a second line with a single integer `target`. Exactly two of the numbers add up to `target`; print their indices (0-based, ascending) separated by a space.\n\nInput:\n  2 7 11 15\n  9\nOutput:\n  0 1",
     "spoken_intro": "Let's start with a short coding exercise. You'll read a list of numbers and a target, and print the indices of the two numbers that add up to it. Run it against the test cases, and submit when you're happy.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\ntarget = int(input())\n\n# TODO: print the two indices that add up to target\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n    int target;\n    cin >> target;\n\n    // TODO: print the two indices that add up to target\n    return 0;\n}\n"
+    },
     "tests": [
       { "name": "example", "stdin": "2 7 11 15\n9\n", "expected": "0 1" },
       { "name": "first two", "stdin": "3 3 4 5\n6\n", "expected": "0 1" },
@@ -12,49 +16,70 @@
     ]
   },
   {
-    "id": "reverse-string",
-    "title": "Reverse a String",
+    "id": "valid-parentheses",
+    "title": "Valid Parentheses",
     "difficulty": "easy",
-    "prompt": "Read a single line of text and print it reversed.\n\nInput:\n  hello\nOutput:\n  olleh",
-    "spoken_intro": "Here's an easy warm-up. Read a line of text and print it reversed. Try the test cases and submit when ready.",
+    "prompt": "Read a single line containing only the characters ( ) [ ] { }. Print \"true\" if every opening bracket is closed by a matching bracket of the same type in the correct order, otherwise print \"false\".\n\nInput:\n  ()[]{}\nOutput:\n  true",
+    "spoken_intro": "Here's a classic. You'll get a string of brackets, and you need to decide whether they're balanced and correctly nested. Print true or false, run the tests, and submit when ready.",
+    "starter": {
+      "python": "s = input()\n\n# TODO: print \"true\" if the brackets are balanced, else \"false\"\n",
+      "c++": "#include <iostream>\n#include <string>\n#include <stack>\nusing namespace std;\n\nint main() {\n    string s;\n    getline(cin, s);\n\n    // TODO: print \"true\" if the brackets are balanced, else \"false\"\n    return 0;\n}\n"
+    },
     "tests": [
-      { "name": "word", "stdin": "hello\n", "expected": "olleh" },
-      { "name": "phrase", "stdin": "ab cd\n", "expected": "dc ba" },
-      { "name": "single", "stdin": "x\n", "expected": "x" }
+      { "name": "simple pair", "stdin": "()\n", "expected": "true" },
+      { "name": "all types", "stdin": "()[]{}\n", "expected": "true" },
+      { "name": "mismatch", "stdin": "(]\n", "expected": "false" },
+      { "name": "wrong order", "stdin": "([)]\n", "expected": "false" },
+      { "name": "nested", "stdin": "{[]}\n", "expected": "true" }
     ]
   },
   {
-    "id": "fizzbuzz",
-    "title": "FizzBuzz",
+    "id": "best-time-stock",
+    "title": "Best Time to Buy and Sell Stock",
     "difficulty": "easy",
-    "prompt": "Print the numbers from 1 to 15, one per line. For multiples of 3 print \"Fizz\", for multiples of 5 print \"Buzz\", and for multiples of both print \"FizzBuzz\". No input is given.",
-    "spoken_intro": "Let's do FizzBuzz. Print one through fifteen, replacing multiples of three with Fizz, five with Buzz, and both with FizzBuzz. Run the test and submit when ready.",
+    "prompt": "Read a line of space-separated integers representing a stock's price on each day. Pick one day to buy and a later day to sell to maximize profit. Print the maximum profit, or 0 if no profitable trade is possible.\n\nInput:\n  7 1 5 3 6 4\nOutput:\n  5",
+    "spoken_intro": "This one's about a stock's daily prices. You buy on one day and sell on a later day, and you want the maximum possible profit. Print it, or zero if there's no profit to be made. Test it and submit when ready.",
+    "starter": {
+      "python": "prices = list(map(int, input().split()))\n\n# TODO: print the maximum profit (0 if none)\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> prices;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) prices.push_back(x);\n\n    // TODO: print the maximum profit (0 if none)\n    return 0;\n}\n"
+    },
     "tests": [
-      { "name": "full", "stdin": "", "expected": "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz" }
+      { "name": "profit", "stdin": "7 1 5 3 6 4\n", "expected": "5" },
+      { "name": "no profit", "stdin": "7 6 4 3 1\n", "expected": "0" },
+      { "name": "two days", "stdin": "1 2\n", "expected": "1" }
     ]
   },
   {
-    "id": "count-vowels",
-    "title": "Count Vowels",
+    "id": "contains-duplicate",
+    "title": "Contains Duplicate",
     "difficulty": "easy",
-    "prompt": "Read a single line of text and print how many vowels (a, e, i, o, u) it contains, case-insensitive.\n\nInput:\n  Interview\nOutput:\n  4",
-    "spoken_intro": "A quick string problem. Read a line of text and print how many vowels it has, ignoring case. Test it and submit when ready.",
+    "prompt": "Read a line of space-separated integers. Print \"true\" if any value appears at least twice, otherwise print \"false\".\n\nInput:\n  1 2 3 1\nOutput:\n  true",
+    "spoken_intro": "A quick one. Given a list of integers, tell me whether any value shows up more than once. Print true or false, run the tests, and submit when ready.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print \"true\" if there is a duplicate, else \"false\"\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\n#include <unordered_set>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print \"true\" if there is a duplicate, else \"false\"\n    return 0;\n}\n"
+    },
     "tests": [
-      { "name": "word", "stdin": "Interview\n", "expected": "4" },
-      { "name": "caps", "stdin": "AEIOU\n", "expected": "5" },
-      { "name": "none", "stdin": "rhythm\n", "expected": "0" }
+      { "name": "has duplicate", "stdin": "1 2 3 1\n", "expected": "true" },
+      { "name": "all unique", "stdin": "1 2 3 4\n", "expected": "false" },
+      { "name": "all same", "stdin": "1 1 1 1\n", "expected": "true" }
     ]
   },
   {
-    "id": "max-in-list",
-    "title": "Maximum in a List",
+    "id": "max-subarray",
+    "title": "Maximum Subarray",
     "difficulty": "easy",
-    "prompt": "Read a line of space-separated integers and print the largest one. Do not use your language's built-in max function.\n\nInput:\n  3 7 2 9 4\nOutput:\n  9",
-    "spoken_intro": "Here's a simple one. Read a list of integers and print the largest, without using the built-in max function. Run the tests and submit when you're done.",
+    "prompt": "Read a line of space-separated integers. Print the largest sum obtainable from any contiguous, non-empty subarray.\n\nInput:\n  -2 1 -3 4 -1 2 1 -5 4\nOutput:\n  6",
+    "spoken_intro": "Last one, a little meatier. Given a list of integers, find the contiguous run of numbers with the largest sum, and print that sum. Run the tests and submit when you're done.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print the maximum contiguous subarray sum\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the maximum contiguous subarray sum\n    return 0;\n}\n"
+    },
     "tests": [
-      { "name": "example", "stdin": "3 7 2 9 4\n", "expected": "9" },
-      { "name": "negatives", "stdin": "-5 -2 -9\n", "expected": "-2" },
-      { "name": "single", "stdin": "42\n", "expected": "42" }
+      { "name": "mixed", "stdin": "-2 1 -3 4 -1 2 1 -5 4\n", "expected": "6" },
+      { "name": "single", "stdin": "1\n", "expected": "1" },
+      { "name": "all negative", "stdin": "-3 -1 -2\n", "expected": "-1" },
+      { "name": "all positive", "stdin": "5 4 -1 7 8\n", "expected": "23" }
     ]
   }
 ]

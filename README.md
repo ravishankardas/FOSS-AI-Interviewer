@@ -4,6 +4,11 @@ An open-source, voice-based AI interviewer. It parses a candidate's resume,
 conducts a spoken interview over a **STT → LLM → TTS** pipeline, and produces a
 structured hiring report at the end.
 
+It also runs a **coding round**: the candidate solves a problem in an in-browser
+editor, runs it against visible test cases (executed in a sandboxed
+[Piston](https://github.com/engineer-man/piston) engine), and the interviewer
+asks a spoken follow-up about their code.
+
 Runs locally on CPU (GPU optional). Pluggable backends — the **LLM** is local
 `llama.cpp` or Gemini, and **STT** is local `faster-whisper` or hosted Groq
 (`whisper-large-v3`) with automatic fallback to local Whisper.
@@ -13,24 +18,36 @@ Runs locally on CPU (GPU optional). Pluggable backends — the **LLM** is local
 ## How it works
 
 ```
-Resume (PDF) ──► parse ──► generate questions
-                                  │
-                                  ▼
-        ┌─────────────  interview loop  ─────────────┐
-        │  TTS speaks question  (Piper)               │
-        │  mic audio ──► VAD (Silero) ──► STT (Groq/   │
-        │                                  Whisper)    │
-        │  answer ──► LLM evaluates ──► score+feedback │
-        │  grounded follow-up: re-transcribe the answer│
-        │  and ask a deeper question (filler masks the │
-        │  latency while it's produced)                │
-        └──────────────────────────────────────────────┘
-                                  │
-                                  ▼
-                  LLM summary + recommendation
-                                  │
-                                  ▼
-                     Markdown interview report
+Resume (PDF) ──► parse ──► generate questions   (in the background)
+       │
+       ▼
+  greeting + self-intro
+       │
+       ▼
+┌──────────────  coding round  ───────────────┐
+│  editor in browser (CodeMirror)             │
+│  Run / Run tests ──► Piston sandbox ──►      │
+│                       stdout + pass/fail     │
+│  submit ──► grounded spoken follow-up        │
+│  graded on code + test results (coding rubric)│
+└──────────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────  verbal questions  ────────────┐
+│  TTS speaks question  (Piper)               │
+│  mic audio ──► VAD (Silero) ──► STT (Groq/   │
+│                                  Whisper)    │
+│  conversational follow-up: acknowledge the   │
+│  answer, then ask deeper. LLM tokens are     │
+│  streamed sentence-by-sentence into TTS so   │
+│  playback starts almost immediately          │
+└──────────────────────────────────────────────┘
+       │
+       ▼
+  LLM summary + recommendation (coding + verbal combined)
+       │
+       ▼
+  Markdown interview report (with evidence quotes)
 ```
 
 Two ways to run it:
@@ -65,6 +82,22 @@ pip install -e ".[local]"     # or ".[cuda]" / ".[metal]"
 ```
 
 By default the project uses the Gemini backend, which doesn't need `llama-cpp-python`.
+
+### Code execution engine (for the coding round)
+
+The coding round runs candidate code in a self-hosted **Piston** container
+(Docker, Linux engine). Set it up once — see **[docs/piston_setup.md](docs/piston_setup.md)**
+for the full guide. In short:
+
+```bash
+docker volume create piston_packages
+docker run -d --name piston_api -p 2000:2000 \
+  -v piston_packages:/piston/packages --privileged ghcr.io/engineer-man/piston
+# then install the Python and C++ (gcc) runtimes — see the doc
+```
+
+If Piston isn't reachable, set `interview.coding_enabled: false` in `config.yaml`
+to skip the coding round.
 
 ### Quick start
 
@@ -108,6 +141,9 @@ All settings live in `config.yaml`:
 interview:
   max_questions: 2
   follow_up_enabled: true
+  coding_enabled: true        # run the coding round (needs Piston)
+  coding_questions: 1         # how many coding problems to pose
+  code_time_limit: 300        # coding round time cap (seconds) — also the UI timer
 llm:
   provider: gemini            # gemini | local
   model_name: gemini-2.5-flash
@@ -120,6 +156,10 @@ vad:
   silence_duration_ms: 2000
 tts:
   voice: en_US-lessac-medium
+executor:                     # Piston code-execution engine
+  base_url: http://localhost:2000
+  python_version: 3.12.0
+  cpp_version: 10.2.0
 ```
 
 ---
@@ -171,6 +211,9 @@ venv\Scripts\python.exe -m backend.test_client docs/Ravi_AI.pdf Ravi
 |-------|---------|
 | JSON `start` | `{ "type": "start", "candidate_name": "..." }` |
 | binary | float32 PCM, 16kHz mono (mic audio while listening) |
+| JSON `run_code` | `{ "type": "run_code", "language": "python", "code": "..." }` |
+| JSON `run_tests` | `{ "type": "run_tests", "language": "...", "code": "..." }` (runs visible tests) |
+| JSON `code_submit` | `{ "type": "code_submit", "language": "...", "code": "..." }` |
 
 **Server → Client**
 
@@ -181,6 +224,9 @@ venv\Scripts\python.exe -m backend.test_client docs/Ravi_AI.pdf Ravi
 | JSON `listening` | start streaming mic audio |
 | JSON `listening_stop` | VAD detected end; stop streaming |
 | JSON `transcribed` | `{ "text": "..." }` what was heard |
+| JSON `coding_question` | `{ "title", "prompt", "languages", "starter", "tests", "time_limit" }` show the editor |
+| JSON `run_result` | `{ "stdout", "stderr", "compile_error", "exit_code", "timed_out" }` |
+| JSON `test_results` | `{ "results": [{ "name", "passed", "expected", "actual", "error" }] }` |
 | JSON `report` | `{ "markdown": "..." }` final report |
 | JSON `error` | `{ "message": "..." }` |
 
@@ -191,21 +237,31 @@ venv\Scripts\python.exe -m backend.test_client docs/Ravi_AI.pdf Ravi
 ```
 ai_interviewer/        core pipeline (pip package)
   parser.py            PDF → ResumeData
-  question_gen.py      questions + follow-ups
+  question_gen.py      questions, follow-ups, coding-question bank
+  sentence_splitter.py incremental splitter for streaming TTS
   vad.py               Silero VAD
   stt.py               local Whisper / Groq client + fallback
-  llm.py               local / Gemini client
+  llm.py               local / Gemini client (with .stream())
   tts.py               Piper TTS
-  report.py            evaluation + markdown report
+  executor.py          Piston code-execution client
+  report.py            evaluation (verbal + coding rubric) + markdown report
   config.py            config.yaml loader
+  data/
+    coding_questions.json  coding problem bank (prompt, starter, tests)
 backend/
   main.py              FastAPI app, /upload, /ws
   session.py           per-connection InterviewSession state
-  ws_handler.py        interview loop over WebSocket
+  ws_handler.py        interview loop over WebSocket (verbal + coding)
   pipeline.py          CLI mic/speaker pipeline
   test_client.py       terminal WS test client
+frontend/
+  index.html, app.js, style.css   browser UI (vanilla JS + CodeMirror editor)
+scripts/
+  bench_tts.py, bench_latency.py  latency benchmarks
 docs/
   DESIGN.md            full design document
+  piston_setup.md      code-execution engine setup
+  benchmarks.md        latency results
   ws_backend_plan.md   WebSocket backend plan
 config.yaml
 ```
@@ -222,7 +278,11 @@ config.yaml
 - [x] Silence timeout while listening
 - [x] Background transcription/evaluation (overlapped with the interview)
 - [x] Hosted Groq STT with automatic local-Whisper fallback (provider toggle)
-- [x] Grounded follow-up questions (filler phrase masks the produce latency)
+- [x] Grounded, conversational follow-ups (acknowledge then ask)
+- [x] Streaming follow-up: LLM tokens → per-sentence TTS (~4x faster to first audio)
+- [x] Coding round: in-browser editor, sandboxed Piston execution, visible test cases
+- [x] Coding graded on correctness (test results) via a dedicated coding rubric
+- [x] Combined report (coding + verbal) with evidence quotes
 
 See `handover.md` for current working notes.
 

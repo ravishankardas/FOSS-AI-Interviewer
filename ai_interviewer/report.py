@@ -83,6 +83,53 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
     return AnswerEval(question=question.text, topic=question.topic, answer=answer, score=data['score'], feedback=data['feedback'], evidence=data.get('evidence', ''))
 
 
+def evaluate_code(title: str, problem: str, language: str, code: str, results: list,
+                  followup_q: str, followup_a: str, llm: Any) -> AnswerEval:
+    # dedicated coding grader: correctness-first, not bound by the lenient verbal
+    # rubric. Judges the problem + actual code + test outcome + spoken explanation.
+    passed = sum(1 for r in results if r["passed"])
+    total = len(results)
+    lines = "\n".join(f"  - {r['name']}: {'PASS' if r['passed'] else 'FAIL'}" for r in results)
+    test_block = f"{passed}/{total} visible tests passed\n{lines}" if total else "No automated tests available."
+
+    system = """
+        You are an expert technical interviewer grading a candidate's solution to a
+        coding problem. Score from 0 to 10 based primarily on CORRECTNESS, then on
+        approach/efficiency, then on how clearly they explained it.
+
+        Rubric (do NOT be more lenient than this):
+        - Passes all tests, clean approach, clear explanation: 8-10
+        - Passes all tests but brute-force or weakly explained: 6-7
+        - Partially correct (passes some tests): 3-5
+        - Fails most tests or fundamentally wrong: 0-2
+        Do not inflate the score for failing code just because the explanation sounds
+        plausible. Correctness is shown by the automated test results.
+
+        Output rules (strict):
+        - Return ONLY a JSON object, starting with { and ending with }
+        - No markdown, no code fences, no text before or after
+        Format: {"score": 0-10, "feedback": "...", "evidence": "short note citing the test outcome or a specific part of the code"}
+    """
+    prompt = f"""
+        Problem: {title}
+        {problem}
+
+        Candidate's {language} solution:
+        {code}
+
+        Automated test results:
+        {test_block}
+
+        Interviewer's follow-up question: {followup_q}
+        Candidate's spoken answer: {followup_a}
+    """
+    response = llm.complete(prompt=prompt, system=system, response_schema=_EvalSchema)
+    data = json.loads(response)
+    answer = f"[{language}] solution — {passed}/{total} tests passed.\nExplanation: {followup_a}"
+    return AnswerEval(question=f"{title} (coding)", topic="coding", answer=answer,
+                      score=data["score"], feedback=data["feedback"], evidence=data.get("evidence", ""))
+
+
 def evals_to_string(evals: List[AnswerEval]) -> str:
     answer = []
     for i, eval in enumerate(evals):

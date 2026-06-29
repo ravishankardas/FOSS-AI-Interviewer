@@ -10,7 +10,7 @@ from ai_interviewer.question_gen import (
     generate_code_followup_stream,
     pick_coding_questions,
 )
-from ai_interviewer.report import evaluate_answer, generate_report, to_markdown
+from ai_interviewer.report import evaluate_answer, evaluate_code, generate_report, to_markdown
 from ai_interviewer.sentence_splitter import SentenceSplitter
 from .session import InterviewSession, SessionState
 import json
@@ -181,7 +181,9 @@ async def _stt_worker(ws: WebSocket, session: InterviewSession, queue: asyncio.Q
             if item is None:
                 break  # sentinel: interview finished asking
 
-            turn, question, audio, text = item
+            # grader is an optional callable(text) -> AnswerEval for coding turns;
+            # verbal turns leave it None and fall back to evaluate_answer
+            turn, question, audio, text, grader = item
             if text is not None:
                 # already transcribed on the critical path (to ground a follow-up)
                 pass
@@ -195,8 +197,14 @@ async def _stt_worker(ws: WebSocket, session: InterviewSession, queue: asyncio.Q
 
             await ws.send_json({"type": "transcribed", "turn": turn, "text": text})
 
-            # question is None for the warm-up intro — transcribe but don't score
-            if question is not None and text.strip():
+            if grader is not None:
+                # coding turn: grade with the dedicated coding rubric (the spoken
+                # explanation may be empty; correctness still scores)
+                eval = await run_in_executor(grader, text)
+                logger.info(f"[{sid}] (bg) turn {turn} coding score: {eval.score}/10")
+                evals[turn] = eval
+            elif question is not None and text.strip():
+                # question is None for the warm-up intro — transcribe but don't score
                 eval = await run_in_executor(evaluate_answer, question, text, session.llm)
                 logger.info(f"[{sid}] (bg) turn {turn} score: {eval.score}/10")
                 evals[turn] = eval
@@ -263,18 +271,6 @@ async def _run_tests(session: InterviewSession, language: str, code: str, tests:
     return results
 
 
-def _coding_eval_question(cq, language: str, code: str, output: str) -> Question:
-    # fold the problem + submitted code + output into the question so the spoken
-    # explanation is scored in context (grading = run + LLM reasoning)
-    text = (
-        f"Coding problem: {cq.title}\n{cq.prompt}\n\n"
-        f"Candidate's {language} solution:\n{code}\n\n"
-        f"Program output:\n{output}\n\n"
-        "The answer below is the candidate's spoken explanation of this solution."
-    )
-    return Question(text=text, topic="coding")
-
-
 async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyncio.Queue, turn: int):
     # show the problem, let the candidate run code freely, then ask a grounded
     # spoken follow-up about what they wrote. Returns (next_turn, answered).
@@ -289,6 +285,7 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
         "title": cq.title,
         "prompt": cq.prompt,
         "languages": CODING_LANGUAGES,
+        "starter": cq.starter,
         "time_limit": session.cfg.interview.code_time_limit,
         # expose the visible test cases (without the trailing-newline noise)
         "tests": [{"name": t.get("name", f"test {i+1}"), "stdin": t.get("stdin", ""),
@@ -355,8 +352,20 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
     await ws.send_json({"type": "listening", "turn": turn})
     audio = await _capture_answer(ws, session)
 
-    eval_q = _coding_eval_question(cq, last_lang, last_code, last_output)
-    await queue.put((turn, eval_q, audio, None))
+    # run the visible tests against the submitted code (authoritative correctness
+    # signal for scoring) — off the critical path, the candidate already answered
+    results = await _run_tests(session, last_lang, last_code, cq.tests) if cq.tests else []
+    passed = sum(1 for r in results if r["passed"])
+    logger.info(f"[{sid}] submitted code scored {passed}/{len(results)} tests")
+
+    # grade with the dedicated coding rubric: problem + code + test outcome +
+    # the follow-up Q and the candidate's spoken answer (filled in by the worker)
+    def grader(answer_text, _cq=cq, _lang=last_lang, _code=last_code,
+               _results=results, _fq=followup_text):
+        return evaluate_code(_cq.title, _cq.prompt, _lang, _code, _results, _fq,
+                             answer_text, session.llm)
+
+    await queue.put((turn, None, audio, None, grader))
     return turn + 1, True
 
 
@@ -394,7 +403,7 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
         greeting = GREETING.format(name=session.candidate_name)
         await _ask_question(ws, session, Question(text=greeting, topic="introduction"), turn=turn)
         intro_audio = await _capture_answer(ws, session)
-        await queue.put((turn, None, intro_audio, None))  # warm-up: transcribe, don't score
+        await queue.put((turn, None, intro_audio, None, None))  # warm-up: transcribe, don't score
         turn += 1
 
         answered = False
@@ -431,7 +440,7 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
                 logger.info(f"[{sid}] grounding follow-up on: {answer_text!r}")
 
             # hand off eval (reuse answer_text if we already transcribed it)
-            await queue.put((turn, question, audio, answer_text))
+            await queue.put((turn, question, audio, answer_text, None))
             turn += 1
 
             if do_followup and answer_text and answer_text.strip():
@@ -447,7 +456,7 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
                 await ws.send_json({"type": "listening", "turn": turn})
                 fu_audio = await _capture_answer(ws, session)
                 followup = Question(text=followup_text, topic=question.topic)
-                await queue.put((turn, followup, fu_audio, None))
+                await queue.put((turn, followup, fu_audio, None, None))
                 turn += 1
 
         # speak the farewell now so its playback masks the final transcription,

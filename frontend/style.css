@@ -281,6 +281,28 @@ body {
 @keyframes dots { 0% { content: "·"; } 33% { content: "· ·"; } 66% { content: "· · ·"; } }
 
 /* ── coding round ─────────────────────── */
+.coding-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.coding-timer {
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+.coding-timer.low { color: var(--amber); border-color: var(--amber-d); }
+.coding-timer.critical {
+  color: #e8755d;
+  border-color: #6b3a32;
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.5; } }
 .coding-title {
   font-family: var(--grotesk);
   font-weight: 500;

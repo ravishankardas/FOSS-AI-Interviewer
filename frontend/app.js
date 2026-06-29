@@ -23,6 +23,7 @@ const codingPromptEl = $("coding-prompt");
 const codingLangEl = $("coding-lang");
 const codingOutputEl = $("coding-output");
 const codingTestsEl = $("coding-tests");
+const codingTimerEl = $("coding-timer");
 const runCodeBtn = $("run-code");
 const runTestsBtn = $("run-tests");
 const submitCodeBtn = $("submit-code");
@@ -43,10 +44,20 @@ let editor = null;           // CodeMirror instance (lazy)
 let codingActive = false;
 const CM_MODE = { python: "python", "c++": "text/x-c++src" };
 const STARTER = {
-  python: "# Write your solution here\n",
+  python:
+    "import sys\n\n" +
+    "# read input from stdin\n" +
+    "data = sys.stdin.read().split()\n\n" +
+    "# TODO: write your solution and print the answer\n",
   "c++":
-    "#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n",
+    "#include <iostream>\n#include <string>\n#include <vector>\nusing namespace std;\n\n" +
+    "int main() {\n" +
+    "    // read input from stdin, e.g.:\n" +
+    "    // int x; cin >> x;\n\n" +
+    "    // TODO: write your solution and print the answer\n" +
+    "    return 0;\n}\n",
 };
+let codingTimerId = null;
 
 // lamp level easing
 let targetLevel = 0;
@@ -260,11 +271,57 @@ function ensureEditor() {
 }
 
 let currentTests = [];   // visible test cases for the active coding question
+let currentStarter = {}; // per-language starter code for the active question
+
+// the starter for a language: problem-specific if provided, else generic fallback
+function starterFor(lang) {
+  return (currentStarter && currentStarter[lang]) || STARTER[lang];
+}
 
 function setCodingBusy(busy) {
   runCodeBtn.disabled = busy;
   runTestsBtn.disabled = busy;
   submitCodeBtn.disabled = busy;
+}
+
+// ── coding timer ──────────────────────────────────────
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function startTimer(seconds) {
+  stopTimer();
+  let left = seconds;
+  const tick = () => {
+    codingTimerEl.textContent = fmtTime(left);
+    codingTimerEl.classList.toggle("low", left <= 60 && left > 20);
+    codingTimerEl.classList.toggle("critical", left <= 20);
+    if (left <= 0) {
+      stopTimer();
+      // time's up — auto-submit whatever is in the editor
+      submitCoding(true);
+      return;
+    }
+    left -= 1;
+  };
+  tick();
+  codingTimerId = setInterval(tick, 1000);
+}
+
+function stopTimer() {
+  if (codingTimerId) clearInterval(codingTimerId);
+  codingTimerId = null;
+}
+
+function submitCoding(timedOut = false) {
+  if (!codingActive) return;
+  stopTimer();
+  setCodingBusy(true);
+  sendCode("code_submit");
+  hideCoding();
+  setLabel("On air");
+  setSpeaker(timedOut ? "Time's up — reviewing your solution…" : "Reviewing your solution…");
 }
 
 const esc = (s) =>
@@ -310,6 +367,7 @@ function showCoding(msg) {
   codingOutputEl.textContent = "Run your code, or run the test cases below.";
   codingOutputEl.className = "coding-output";
   currentTests = msg.tests || [];
+  currentStarter = msg.starter || {};
   renderTests(null);
 
   interviewEl.hidden = true;
@@ -319,14 +377,16 @@ function showCoding(msg) {
   const cm = ensureEditor();
   const lang = codingLangEl.value || "python";
   cm.setOption("mode", CM_MODE[lang]);
-  cm.setValue(STARTER[lang]);
+  cm.setValue(starterFor(lang));
   setCodingBusy(false);
+  startTimer(msg.time_limit || 300);
   // CodeMirror needs a refresh once its container is visible
   setTimeout(() => cm.refresh(), 0);
 }
 
 function hideCoding() {
   codingActive = false;
+  stopTimer();
   codingEl.hidden = true;
   interviewEl.hidden = false;
 }
@@ -521,14 +581,7 @@ runTestsBtn.addEventListener("click", () => {
   sendCode("run_tests");
 });
 
-submitCodeBtn.addEventListener("click", () => {
-  if (!codingActive) return;
-  setCodingBusy(true);
-  sendCode("code_submit");
-  hideCoding();
-  setLabel("On air");
-  setSpeaker("Reviewing your solution…");
-});
+submitCodeBtn.addEventListener("click", () => submitCoding(false));
 
 // switch editor language; swap in the starter only if untouched
 codingLangEl.addEventListener("change", () => {
@@ -536,9 +589,14 @@ codingLangEl.addEventListener("change", () => {
   const lang = codingLangEl.value;
   editor.setOption("mode", CM_MODE[lang]);
   const cur = editor.getValue().trim();
-  if (cur === "" || cur === STARTER.python.trim() || cur === STARTER["c++"].trim()) {
-    editor.setValue(STARTER[lang]);
-  }
+  const untouched = [
+    "",
+    starterFor("python").trim(),
+    starterFor("c++").trim(),
+    STARTER.python.trim(),
+    STARTER["c++"].trim(),
+  ].includes(cur);
+  if (untouched) editor.setValue(starterFor(lang));
 });
 
 // reveal the report (tears down audio/WS) once the candidate clicks

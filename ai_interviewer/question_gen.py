@@ -26,6 +26,7 @@ class CodingQuestion:
     difficulty: str
     prompt: str                          # shown in the editor panel
     spoken_intro: str                    # read aloud by TTS (shorter, conversational)
+    starter: dict = field(default_factory=dict)  # {python, c++} input-reading scaffold
     tests: list = field(default_factory=list)  # [{name, stdin, expected}] visible cases
 
 
