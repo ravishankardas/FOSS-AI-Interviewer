@@ -12,6 +12,7 @@ class AnswerEval:
     answer: str
     score: int
     feedback: str
+    evidence: str = ""
 
 
 @dataclass
@@ -26,6 +27,7 @@ class InterviewReport:
 class _EvalSchema(BaseModel):
     score: int
     feedback: str
+    evidence: str
 
 
 class _ReportSchema(BaseModel):
@@ -40,7 +42,10 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
     """
     system = """
         You are an expert answer evaluator. Given the question, topic and the answer
-        evaluate the answer based on the question. Give the score and your feedback
+        evaluate the answer based on the question. Give the score, your feedback, and
+        the evidence: a short VERBATIM quote from the candidate's answer that best
+        justifies the score. Quote the answer exactly — do not paraphrase or invent
+        text. If the answer is empty or off-topic, return an empty evidence string.
 
         Scoring guidance (be lenient and encouraging):
         - If the answer is relevant to the question and on-topic, the score must be
@@ -56,7 +61,7 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
         - Start your response with { and end with }
         - Do NOT wrap in markdown or code fences
         - Do NOT add any explanation before or after the JSON
-        Format: {"score": 0-10, "feedback": your feedback}
+        Format: {"score": 0-10, "feedback": your feedback, "evidence": verbatim quote from the answer}
 
         Below is an example of expected output. DO NOT parrot it in the actual output
 
@@ -69,22 +74,24 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
 
             Output:
             {"score": 8, "feedback": "Strong answer with a concrete metric and clear
-            technical solution. Could mention trade-offs considered."}
+            technical solution. Could mention trade-offs considered.", "evidence":
+            "I reduced API latency by 40% by caching frequent DB queries with Redis."}
     """
 
     response = llm.complete(prompt = prompt, system = system, response_schema = _EvalSchema)
     data = json.loads(response)
-    return AnswerEval(question=question.text, topic=question.topic, answer=answer, score=data['score'], feedback=data['feedback'])
+    return AnswerEval(question=question.text, topic=question.topic, answer=answer, score=data['score'], feedback=data['feedback'], evidence=data.get('evidence', ''))
 
 
 def evals_to_string(evals: List[AnswerEval]) -> str:
     answer = []
     for i, eval in enumerate(evals):
+        evidence_line = f"\n        - **Evidence:** \"{eval.evidence}\"" if eval.evidence else ""
         curr = f"""
         ### Q{i+1}: {eval.question} (Topic: {eval.topic})
         - **Answer:** {eval.answer}
         - **Score:** {eval.score}
-        - **Feedback:** {eval.feedback}
+        - **Feedback:** {eval.feedback}{evidence_line}
         """
         answer.append(curr)
     return "\n".join(answer)
