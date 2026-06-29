@@ -280,6 +280,98 @@ body {
 }
 @keyframes dots { 0% { content: "·"; } 33% { content: "· ·"; } 66% { content: "· · ·"; } }
 
+/* ── coding round ─────────────────────── */
+.coding-title {
+  font-family: var(--grotesk);
+  font-weight: 500;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+  margin: 0 0 1rem;
+}
+.coding-prompt {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1rem 1.1rem;
+  margin: 0 0 1.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.coding-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.coding-lang-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.coding-lang {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+}
+.coding-lang:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.coding-spacer { flex: 1; }
+.coding-toolbar .begin,
+.coding-toolbar .restart-btn { margin-top: 0; padding: 0.7rem 1.2rem; }
+.coding-toolbar .begin:disabled,
+.coding-toolbar .restart-btn:disabled { opacity: 0.45; cursor: progress; }
+
+/* CodeMirror editor surface */
+.CodeMirror {
+  height: auto;
+  min-height: 280px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.CodeMirror-focused { border-color: var(--amber-d); }
+
+.coding-output-wrap { margin-top: 1.25rem; }
+.coding-output-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.coding-output {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.9rem 1rem;
+  margin: 0;
+  min-height: 3rem;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.coding-output.err { color: #e8755d; }
+.coding-output.ok { color: #8fce8f; }
+
 /* ── report / dossier ─────────────────── */
 .verdict {
   display: inline-block;

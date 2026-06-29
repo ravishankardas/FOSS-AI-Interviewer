@@ -16,6 +16,14 @@ const speakerTag = $("speaker-tag");
 const viewReportBtn = $("view-report");
 const verdictEl = $("verdict");
 const errorEl = $("error");
+// coding round
+const codingEl = $("coding");
+const codingTitleEl = $("coding-title");
+const codingPromptEl = $("coding-prompt");
+const codingLangEl = $("coding-lang");
+const codingOutputEl = $("coding-output");
+const runCodeBtn = $("run-code");
+const submitCodeBtn = $("submit-code");
 
 // --- audio state ---
 let audioCtx = null;        // AudioContext @ SAMPLE_RATE (capture + playback)
@@ -27,6 +35,16 @@ let playbackChain = Promise.resolve();
 let ws = null;
 let candidateName = "Candidate";
 let pendingReport = null;    // report markdown, shown when "View report" is clicked
+
+// coding state
+let editor = null;           // CodeMirror instance (lazy)
+let codingActive = false;
+const CM_MODE = { python: "python", "c++": "text/x-c++src" };
+const STARTER = {
+  python: "# Write your solution here\n",
+  "c++":
+    "#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n",
+};
 
 // lamp level easing
 let targetLevel = 0;
@@ -168,6 +186,85 @@ function showError(msg) {
   errorEl.hidden = false;
 }
 
+// ── coding round ──────────────────────────────────────
+function ensureEditor() {
+  if (editor) return editor;
+  editor = CodeMirror.fromTextArea($("code-editor"), {
+    mode: CM_MODE.python,
+    theme: "material-darker",
+    lineNumbers: true,
+    indentUnit: 4,
+    tabSize: 4,
+    autofocus: true,
+  });
+  return editor;
+}
+
+function setCodingBusy(busy) {
+  runCodeBtn.disabled = busy;
+  submitCodeBtn.disabled = busy;
+}
+
+// show the editor for a coding_question; the spoken intro arrives as a separate
+// binary frame and plays via the normal playWav path.
+function showCoding(msg) {
+  codingActive = true;
+  codingTitleEl.textContent = msg.title || "Coding problem";
+  codingPromptEl.textContent = msg.prompt || "";
+  codingOutputEl.textContent = "Run your code to see output here.";
+  codingOutputEl.className = "coding-output";
+
+  interviewEl.hidden = true;
+  codingEl.hidden = false;
+  setLabel("Coding");
+
+  const cm = ensureEditor();
+  const lang = codingLangEl.value || "python";
+  cm.setOption("mode", CM_MODE[lang]);
+  cm.setValue(STARTER[lang]);
+  setCodingBusy(false);
+  // CodeMirror needs a refresh once its container is visible
+  setTimeout(() => cm.refresh(), 0);
+}
+
+function hideCoding() {
+  codingActive = false;
+  codingEl.hidden = true;
+  interviewEl.hidden = false;
+}
+
+function renderRunResult(msg) {
+  setCodingBusy(false);
+  if (msg.error) {
+    codingOutputEl.textContent = msg.error;
+    codingOutputEl.className = "coding-output err";
+    return;
+  }
+  if (msg.compile_error) {
+    codingOutputEl.textContent = msg.compile_error;
+    codingOutputEl.className = "coding-output err";
+    return;
+  }
+  let text = msg.stdout || "";
+  if (msg.stderr) text += (text ? "\n" : "") + msg.stderr;
+  if (msg.timed_out) text += (text ? "\n" : "") + "[timed out]";
+  if (!text) text = `(no output, exit code ${msg.exit_code})`;
+  codingOutputEl.textContent = text;
+  codingOutputEl.className =
+    "coding-output " + (msg.exit_code === 0 && !msg.stderr ? "ok" : "");
+}
+
+function sendCode(type) {
+  if (!ws || ws.readyState !== WebSocket.OPEN || !editor) return;
+  ws.send(
+    JSON.stringify({
+      type,
+      language: codingLangEl.value || "python",
+      code: editor.getValue(),
+    })
+  );
+}
+
 // ── flow ──────────────────────────────────────────────
 async function startInterview(e) {
   e.preventDefault();
@@ -238,6 +335,12 @@ async function startInterview(e) {
         case "transcribed":
           // transcripts are no longer shown live (kept server-side for the report)
           break;
+        case "coding_question":
+          showCoding(msg);
+          break;
+        case "run_result":
+          renderRunResult(msg);
+          break;
         case "report":
           // the report finished generating while the farewell played; only
           // reveal the button once the farewell has actually finished.
@@ -293,6 +396,35 @@ fileInput.addEventListener("change", () => {
 });
 
 $("callsheet").addEventListener("submit", startInterview);
+
+// coding round controls
+runCodeBtn.addEventListener("click", () => {
+  if (!codingActive) return;
+  codingOutputEl.textContent = "Running…";
+  codingOutputEl.className = "coding-output";
+  setCodingBusy(true);
+  sendCode("run_code");
+});
+
+submitCodeBtn.addEventListener("click", () => {
+  if (!codingActive) return;
+  setCodingBusy(true);
+  sendCode("code_submit");
+  hideCoding();
+  setLabel("On air");
+  setSpeaker("Reviewing your solution…");
+});
+
+// switch editor language; swap in the starter only if untouched
+codingLangEl.addEventListener("change", () => {
+  if (!editor) return;
+  const lang = codingLangEl.value;
+  editor.setOption("mode", CM_MODE[lang]);
+  const cur = editor.getValue().trim();
+  if (cur === "" || cur === STARTER.python.trim() || cur === STARTER["c++"].trim()) {
+    editor.setValue(STARTER[lang]);
+  }
+});
 
 // reveal the report (tears down audio/WS) once the candidate clicks
 viewReportBtn.addEventListener("click", () => {

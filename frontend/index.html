@@ -7,6 +7,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
+  <!-- CodeMirror 5 (editor for the coding round) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.min.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -61,6 +67,31 @@
       <button id="view-report" type="button" class="begin" hidden>
         View report <span aria-hidden="true">→</span>
       </button>
+    </section>
+
+    <!-- ──────────────── CODING ─────────────────── -->
+    <section id="coding" class="stage" hidden>
+      <p class="eyebrow">Coding round</p>
+      <h2 id="coding-title" class="coding-title"></h2>
+      <pre id="coding-prompt" class="coding-prompt"></pre>
+
+      <div class="coding-toolbar">
+        <label class="coding-lang-label" for="coding-lang">Language</label>
+        <select id="coding-lang" class="coding-lang">
+          <option value="python">Python</option>
+          <option value="c++">C++</option>
+        </select>
+        <span class="coding-spacer"></span>
+        <button id="run-code" type="button" class="restart-btn">Run <span aria-hidden="true">▶</span></button>
+        <button id="submit-code" type="button" class="begin">Submit <span aria-hidden="true">→</span></button>
+      </div>
+
+      <textarea id="code-editor"></textarea>
+
+      <div class="coding-output-wrap">
+        <div class="coding-output-label">Output</div>
+        <pre id="coding-output" class="coding-output">Run your code to see output here.</pre>
+      </div>
     </section>
 
     <!-- ───────────────── REPORT ───────────────── -->
