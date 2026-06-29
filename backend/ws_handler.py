@@ -206,13 +206,27 @@ async def _stt_worker(ws: WebSocket, session: InterviewSession, queue: asyncio.Q
             queue.task_done()
 
 GREETING = (
-    "Hi {name}, I am Vanya, your AI interviewer. "
-    "Could you please give me a brief introduction about yourself?"
+    "Hi {name}, great to meet you! I'm Vanya, and I'll be your interviewer today. "
+    "We'll start with a short coding exercise, then chat through your background. "
+    "But first, to break the ice — tell me a little about yourself."
 )
 
 FAREWELL = "Thank you for the interview, {name}. Best of luck with your results."
 
 CODING_LANGUAGES = ["python", "c++"]
+
+# spoken when moving from the coding round into the verbal questions
+TRANSITION_TO_QUESTIONS = (
+    "Great, thanks for working through that. Let's switch gears now and talk "
+    "through your background for a bit."
+)
+
+
+async def _speak_line(ws: WebSocket, session: InterviewSession, text: str):
+    # speak a line without listening afterwards (used for transitions/segues)
+    session.state = SessionState.SPEAKING
+    wav = await run_in_executor(session.tts.synthesize, text)
+    await ws.send_bytes(data=wav)
 
 
 def _result_payload(r) -> dict:
@@ -396,6 +410,10 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
 
         # then the verbal, resume-grounded questions (prep is ready by now)
         questions, first_wav = await prep_task
+
+        # natural segue out of the coding round into the conversation
+        if answered and questions:
+            await _speak_line(ws, session, TRANSITION_TO_QUESTIONS)
 
         for idx, question in enumerate(questions, 1):
             logger.info(f"[{sid}] === question {idx}/{len(questions)} ===")

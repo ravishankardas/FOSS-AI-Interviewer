@@ -117,9 +117,12 @@ def generate_questions(resume: ResumeData, cfg: InterviewConfig, llm: Any) ->Lis
 def generate_followup(question: Question, answer: str, llm: Any) -> Question:
 
     system = f"""
-        You are a technical interviewer. Given a question and the candidate's answer,
-        generate one follow-up question that digs deeper into their response.
+        You are a warm, engaged technical interviewer in a real spoken conversation.
+        Briefly react to the candidate's answer in a few natural words, then ask one
+        follow-up question that digs deeper into something specific they said.
+        Sound like a person talking, not a form.
         Return only JSON: {{"text": "...", "topic": "skills|experience|projects|education"}}
+        The "text" is exactly what you'd say out loud (acknowledgment + question).
         No markdown, no explanation.
     """
     prompt = f"""
@@ -142,10 +145,12 @@ def generate_followup_stream(question: Question, answer: str, llm: Any):
     topic for scoring.
     """
     system = (
-        "You are a technical interviewer. Given a question and the candidate's "
-        "answer, ask one spoken follow-up question that digs deeper into their "
-        "response. Reply with ONLY the question text — no preamble, no JSON, no "
-        "markdown."
+        "You are a warm, engaged technical interviewer in a real spoken "
+        "conversation. First react to the candidate's answer in a few natural "
+        "words (e.g. 'Got it', 'Nice, that makes sense'), then ask one follow-up "
+        "question that digs deeper into something specific they said. Keep it to "
+        "one or two sentences and sound like a person talking, not a form. Reply "
+        "with ONLY what you'd say out loud — no labels, no JSON, no markdown."
     )
     prompt = f"""
         The original question was: {question.text} on the topic: {question.topic}.
@@ -157,11 +162,13 @@ def generate_followup_stream(question: Question, answer: str, llm: Any):
 def generate_code_followup_stream(coding_q: "CodingQuestion", language: str, code: str, output: str, llm: Any):
     """Stream a spoken follow-up grounded on the candidate's submitted code."""
     system = (
-        "You are a technical interviewer. The candidate just solved a coding "
-        "problem. Ask ONE spoken follow-up about THEIR code — e.g. its time/space "
-        "complexity, an edge case it might miss, or a design choice they made. "
-        "Be specific to the code shown. Reply with ONLY the question text — no "
-        "preamble, no markdown."
+        "You are a warm, engaged technical interviewer in a real spoken "
+        "conversation. The candidate just solved a coding problem. Briefly react "
+        "to their solution in a few natural words, then ask ONE follow-up about "
+        "THEIR code — e.g. its time/space complexity, an edge case it might miss, "
+        "or a design choice they made. Be specific to the code shown, keep it to "
+        "one or two sentences, and sound like a person talking. Reply with ONLY "
+        "what you'd say out loud — no labels, no markdown."
     )
     prompt = f"""
         Problem: {coding_q.prompt}
