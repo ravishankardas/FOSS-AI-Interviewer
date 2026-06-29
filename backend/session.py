@@ -14,6 +14,7 @@ class SessionState(Enum):
     STARTED = auto()
     SPEAKING = auto()
     LISTENING = auto()
+    CODING = auto()
     PROCESSING = auto()
     DONE = auto()
 
@@ -26,6 +27,7 @@ class InterviewSession:
     llm: Any
     stt: Any
     tts: Any
+    executor: Any = None
 
     vad: LocalVADModel = field(init=False)
     state: SessionState = SessionState.CREATED

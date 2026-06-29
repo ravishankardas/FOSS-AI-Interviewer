@@ -3,7 +3,13 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from ai_interviewer.config import AppConfig
 from ai_interviewer.parser import parse_resume
-from ai_interviewer.question_gen import Question, generate_questions, generate_followup_stream
+from ai_interviewer.question_gen import (
+    Question,
+    generate_questions,
+    generate_followup_stream,
+    generate_code_followup_stream,
+    pick_coding_questions,
+)
 from ai_interviewer.report import evaluate_answer, generate_report, to_markdown
 from ai_interviewer.sentence_splitter import SentenceSplitter
 from .session import InterviewSession, SessionState
@@ -206,6 +212,104 @@ GREETING = (
 
 FAREWELL = "Thank you for the interview, {name}. Best of luck with your results."
 
+CODING_LANGUAGES = ["python", "c++"]
+
+
+def _result_payload(r) -> dict:
+    return {
+        "type": "run_result",
+        "stdout": r.stdout,
+        "stderr": r.stderr,
+        "compile_error": r.compile_error,
+        "exit_code": r.exit_code,
+        "timed_out": r.timed_out,
+        "error": r.error,
+    }
+
+
+def _coding_eval_question(cq, language: str, code: str, output: str) -> Question:
+    # fold the problem + submitted code + output into the question so the spoken
+    # explanation is scored in context (grading = run + LLM reasoning)
+    text = (
+        f"Coding problem: {cq.title}\n{cq.prompt}\n\n"
+        f"Candidate's {language} solution:\n{code}\n\n"
+        f"Program output:\n{output}\n\n"
+        "The answer below is the candidate's spoken explanation of this solution."
+    )
+    return Question(text=text, topic="coding")
+
+
+async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyncio.Queue, turn: int):
+    # show the problem, let the candidate run code freely, then ask a grounded
+    # spoken follow-up about what they wrote. Returns (next_turn, answered).
+    sid = session.session_id[:8]
+    session.state = SessionState.CODING
+    logger.info(f"[{sid}] coding problem: {cq.title}")
+
+    await ws.send_json({
+        "type": "coding_question",
+        "turn": turn,
+        "id": cq.id,
+        "title": cq.title,
+        "prompt": cq.prompt,
+        "languages": CODING_LANGUAGES,
+        "time_limit": session.cfg.interview.code_time_limit,
+    })
+
+    # speak the intro (no listening — the candidate types, doesn't talk yet)
+    intro_wav = await run_in_executor(session.tts.synthesize, cq.spoken_intro)
+    await ws.send_bytes(data=intro_wav)
+
+    last_lang, last_code, last_output = "python", "", ""
+
+    loop = asyncio.get_event_loop()
+    deadline = loop.time() + session.cfg.interview.code_time_limit
+    while True:
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            logger.info(f"[{sid}] coding turn timed out")
+            break
+        try:
+            msg = await asyncio.wait_for(ws.receive(), timeout=remaining)
+        except asyncio.TimeoutError:
+            break
+        if msg["type"] == "websocket.disconnect":
+            raise WebSocketDisconnect(msg.get("code", 1000))
+        if msg.get("text") is None:
+            continue  # ignore stray binary frames during coding
+
+        data = json.loads(msg["text"])
+        mtype = data.get("type")
+        if mtype == "run_code":
+            last_lang = data.get("language", "python")
+            last_code = data.get("code", "")
+            result = await run_in_executor(session.executor.run, last_lang, last_code)
+            last_output = result.stdout or result.compile_error or result.stderr or ""
+            logger.info(f"[{sid}] ran {last_lang} (exit {result.exit_code})")
+            await ws.send_json(_result_payload(result))
+        elif mtype == "code_submit":
+            last_lang = data.get("language", last_lang)
+            last_code = data.get("code", last_code)
+            logger.info(f"[{sid}] code submitted ({last_lang}, {len(last_code)} chars)")
+            break
+
+    if not last_code.strip():
+        logger.info(f"[{sid}] no code submitted, skipping coding follow-up")
+        return turn, False
+
+    # grounded spoken follow-up about their code, then capture the voice answer
+    followup_text = await _speak_stream(
+        ws, session,
+        lambda: generate_code_followup_stream(cq, last_lang, last_code, last_output, session.llm),
+    )
+    logger.info(f"[{sid}] coding follow-up: {followup_text!r}")
+    await ws.send_json({"type": "listening", "turn": turn})
+    audio = await _capture_answer(ws, session)
+
+    eval_q = _coding_eval_question(cq, last_lang, last_code, last_output)
+    await queue.put((turn, eval_q, audio, None))
+    return turn + 1, True
+
 
 async def _run_interview(ws: WebSocket, session: InterviewSession):
     await _wait_for_start(ws, session)
@@ -282,6 +386,15 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
                 followup = Question(text=followup_text, topic=question.topic)
                 await queue.put((turn, followup, fu_audio, None))
                 turn += 1
+
+        # coding round: pose problem(s), let them run code, ask a grounded
+        # spoken follow-up about what they wrote
+        if (session.cfg.interview.coding_enabled and session.executor is not None):
+            for cq in pick_coding_questions(session.cfg.interview.coding_questions):
+                logger.info(f"[{sid}] === coding: {cq.title} ===")
+                turn, coded = await _coding_turn(ws, session, cq, queue, turn)
+                if coded:
+                    answered = True
 
         # speak the farewell now so its playback masks the final transcription,
         # evaluation, and report generation that still have to finish

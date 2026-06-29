@@ -153,6 +153,26 @@ def generate_followup_stream(question: Question, answer: str, llm: Any):
     return llm.stream(prompt=prompt, system=system)
 
 
+def generate_code_followup_stream(coding_q: "CodingQuestion", language: str, code: str, output: str, llm: Any):
+    """Stream a spoken follow-up grounded on the candidate's submitted code."""
+    system = (
+        "You are a technical interviewer. The candidate just solved a coding "
+        "problem. Ask ONE spoken follow-up about THEIR code — e.g. its time/space "
+        "complexity, an edge case it might miss, or a design choice they made. "
+        "Be specific to the code shown. Reply with ONLY the question text — no "
+        "preamble, no markdown."
+    )
+    prompt = f"""
+        Problem: {coding_q.prompt}
+        Language: {language}
+        The candidate's code:
+        {code}
+        Program output:
+        {output}
+    """
+    return llm.stream(prompt=prompt, system=system)
+
+
 
 if __name__ == "__main__":
     from .config import load_config

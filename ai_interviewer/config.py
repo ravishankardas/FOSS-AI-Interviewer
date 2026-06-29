@@ -42,6 +42,9 @@ class InterviewConfig:
     max_questions: int = 2
     answer_time_limit: int = 120
     follow_up_enabled: bool = True
+    coding_enabled: bool = True
+    coding_questions: int = 1          # how many coding problems to pose
+    code_time_limit: int = 600         # cap on the whole coding turn (seconds)
 
 
 @dataclass

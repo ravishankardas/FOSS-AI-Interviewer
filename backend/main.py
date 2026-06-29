@@ -8,6 +8,7 @@ from ai_interviewer.config import load_config
 from ai_interviewer.llm import create_llm
 from ai_interviewer.stt import create_stt
 from ai_interviewer.tts import LocalTTSClient
+from ai_interviewer.executor import PistonExecutor
 from backend.session import InterviewSession
 from backend.ws_handler import handle_interview
 
@@ -25,11 +26,13 @@ async def lifespan(app: FastAPI):
     llm = create_llm(config.llm)
     stt = create_stt(config.stt)
     tts = LocalTTSClient(config.tts)
+    executor = PistonExecutor(config.executor)
 
     app.state.cfg = config
     app.state.llm = llm
     app.state.stt = stt
     app.state.tts = tts
+    app.state.executor = executor
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     yield
@@ -68,6 +71,7 @@ async def upload(file: UploadFile):
         llm=app.state.llm,
         stt=app.state.stt,
         tts=app.state.tts,
+        executor=app.state.executor,
     )
 
     return {'session_id': session_id}
