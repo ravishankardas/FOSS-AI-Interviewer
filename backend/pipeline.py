@@ -16,6 +16,7 @@ import io
 import wave
 import json
 import os
+import hashlib
 
 from datetime import datetime
 QUESTIONS_CACHE = "questions_cache.json"
@@ -86,18 +87,27 @@ class InterviewPipeline:
         resume = parse_resume(resume_path, self.llm)
         logger.info("Resume parsed.")
 
+        # cache is keyed on the resume's content hash so a different resume never
+        # serves another candidate's cached questions
+        resume_hash = hashlib.sha256(open(resume_path, 'rb').read()).hexdigest()
+        cached = None
         if os.path.exists(QUESTIONS_CACHE):
-            logger.info("Loading questions from cache...")
             with open(QUESTIONS_CACHE) as f:
-                data = json.load(f)
-            questions = [Question(text=q['text'], topic=q['topic']) for q in data]
+                cached = json.load(f)
+
+        if isinstance(cached, dict) and cached.get('resume_hash') == resume_hash:
+            logger.info("Loading questions from cache...")
+            questions = [Question(text=q['text'], topic=q['topic']) for q in cached['questions']]
             logger.info(f"Loaded {len(questions)} questions from cache.")
         else:
             logger.info("Generating questions...")
             questions = generate_questions(resume, self.cfg.interview, self.llm)
             logger.info(f"Generated {len(questions)} questions.")
             with open(QUESTIONS_CACHE, 'w') as f:
-                json.dump([{'text': q.text, 'topic': q.topic} for q in questions], f)
+                json.dump({
+                    'resume_hash': resume_hash,
+                    'questions': [{'text': q.text, 'topic': q.topic} for q in questions],
+                }, f)
 
         answers = []
         for i, question in enumerate(questions):
