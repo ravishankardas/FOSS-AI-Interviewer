@@ -51,6 +51,16 @@ class ServerConfig:
 
 
 @dataclass
+class ExecutorConfig:
+    # self-hosted Piston code-execution engine (see docs/piston_setup.md)
+    base_url: str = "http://localhost:2000"
+    python_version: str = "3.12.0"
+    cpp_version: str = "10.2.0"
+    run_timeout_ms: int = 3000      # wall-clock cap on the run stage
+    compile_timeout_ms: int = 10000  # wall-clock cap on the compile stage (C++)
+
+
+@dataclass
 class AppConfig:
     llm: LLMConfig
     stt: STTConfig = field(default_factory=STTConfig)
@@ -58,6 +68,7 @@ class AppConfig:
     vad: VADConfig = field(default_factory=VADConfig)
     interview: InterviewConfig = field(default_factory=InterviewConfig)
     server: ServerConfig = field(default_factory=ServerConfig)
+    executor: ExecutorConfig = field(default_factory=ExecutorConfig)
 
 
 def load_config(path: str = "config.yaml") -> AppConfig:
@@ -71,4 +82,5 @@ def load_config(path: str = "config.yaml") -> AppConfig:
         vad=VADConfig(**data.get("vad", {})),
         interview=InterviewConfig(**data.get("interview", {})),
         server=ServerConfig(**data.get("server", {})),
+        executor=ExecutorConfig(**data.get("executor", {})),
     )
