@@ -25,6 +25,7 @@ dependencies = [
     "python-multipart",
     "websockets",
     "google-genai",
+    "httpx",
     "python-dotenv",
     "loguru",
     "pydantic",
@@ -42,6 +43,9 @@ ai-interviewer = "ai_interviewer.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ai_interviewer*", "backend*"]
+
+[tool.setuptools.package-data]
+ai_interviewer = ["data/*.json"]
 
 [tool.pytest.ini_options]
 filterwarnings = [

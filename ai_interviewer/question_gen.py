@@ -19,6 +19,31 @@ class Question:
     topic: str
 
 
+@dataclass
+class CodingQuestion:
+    id: str
+    title: str
+    difficulty: str
+    prompt: str         # shown in the editor panel
+    spoken_intro: str   # read aloud by TTS (shorter, conversational)
+
+
+# curated coding-question bank lives next to this module
+_CODING_BANK = os.path.join(os.path.dirname(__file__), "data", "coding_questions.json")
+
+
+def load_coding_questions(path: str = _CODING_BANK) -> List[CodingQuestion]:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return [CodingQuestion(**q) for q in data]
+
+
+def pick_coding_questions(n: int = 1, path: str = _CODING_BANK) -> List[CodingQuestion]:
+    """Return n random questions from the bank (or all of them if n is larger)."""
+    bank = load_coding_questions(path)
+    return random.sample(bank, min(n, len(bank)))
+
+
 # Schemas for Gemini structured output (native JSON mode).
 class _QuestionSchema(BaseModel):
     text: str
