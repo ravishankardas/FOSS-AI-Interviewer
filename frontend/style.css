@@ -372,6 +372,44 @@ body {
 .coding-output.err { color: #e8755d; }
 .coding-output.ok { color: #8fce8f; }
 
+/* visible test cases */
+.coding-tests-wrap { margin-top: 1.25rem; }
+.coding-tests { list-style: none; margin: 0; padding: 0; }
+.coding-tests li {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface);
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+.coding-tests .test-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--muted);
+}
+.coding-tests .test-status {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.45rem;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  color: var(--faint);
+}
+.coding-tests li.pass .test-status { color: #8fce8f; border-color: #3c5c3c; }
+.coding-tests li.fail .test-status { color: #e8755d; border-color: #6b3a32; }
+.coding-tests .test-io {
+  margin: 0.5rem 0 0;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.coding-tests .test-io .k { color: var(--faint); }
+.coding-tests .test-io .got-bad { color: #e8755d; }
+
 /* ── report / dossier ─────────────────── */
 .verdict {
   display: inline-block;

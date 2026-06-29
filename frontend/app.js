@@ -22,7 +22,9 @@ const codingTitleEl = $("coding-title");
 const codingPromptEl = $("coding-prompt");
 const codingLangEl = $("coding-lang");
 const codingOutputEl = $("coding-output");
+const codingTestsEl = $("coding-tests");
 const runCodeBtn = $("run-code");
+const runTestsBtn = $("run-tests");
 const submitCodeBtn = $("submit-code");
 
 // --- audio state ---
@@ -200,9 +202,46 @@ function ensureEditor() {
   return editor;
 }
 
+let currentTests = [];   // visible test cases for the active coding question
+
 function setCodingBusy(busy) {
   runCodeBtn.disabled = busy;
+  runTestsBtn.disabled = busy;
   submitCodeBtn.disabled = busy;
+}
+
+const esc = (s) =>
+  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// render the test list; pass `results` to show pass/fail + actual output
+function renderTests(results) {
+  if (!currentTests.length) {
+    codingTestsEl.innerHTML = "";
+    return;
+  }
+  codingTestsEl.innerHTML = currentTests
+    .map((t, i) => {
+      const r = results && results[i];
+      const cls = r ? (r.passed ? "pass" : "fail") : "";
+      const status = r ? (r.passed ? "pass" : "fail") : "not run";
+      const stdinRow = t.stdin
+        ? `<div><span class="k">in:  </span>${esc(t.stdin.replace(/\n/g, "⏎"))}</div>`
+        : "";
+      const expRow = `<div><span class="k">want:</span> ${esc(t.expected)}</div>`;
+      const gotRow =
+        r && !r.passed
+          ? `<div><span class="k">got: </span><span class="got-bad">${esc(
+              r.error || r.actual || "(no output)"
+            )}</span></div>`
+          : "";
+      return `<li class="${cls}">
+        <div class="test-head"><span class="test-status">${status}</span><span>${esc(
+        t.name
+      )}</span></div>
+        <div class="test-io">${stdinRow}${expRow}${gotRow}</div>
+      </li>`;
+    })
+    .join("");
 }
 
 // show the editor for a coding_question; the spoken intro arrives as a separate
@@ -211,8 +250,10 @@ function showCoding(msg) {
   codingActive = true;
   codingTitleEl.textContent = msg.title || "Coding problem";
   codingPromptEl.textContent = msg.prompt || "";
-  codingOutputEl.textContent = "Run your code to see output here.";
+  codingOutputEl.textContent = "Run your code, or run the test cases below.";
   codingOutputEl.className = "coding-output";
+  currentTests = msg.tests || [];
+  renderTests(null);
 
   interviewEl.hidden = true;
   codingEl.hidden = false;
@@ -341,6 +382,15 @@ async function startInterview(e) {
         case "run_result":
           renderRunResult(msg);
           break;
+        case "test_results": {
+          setCodingBusy(false);
+          renderTests(msg.results);
+          const passed = msg.results.filter((r) => r.passed).length;
+          codingOutputEl.textContent = `${passed}/${msg.results.length} test cases passed.`;
+          codingOutputEl.className =
+            "coding-output " + (passed === msg.results.length ? "ok" : "err");
+          break;
+        }
         case "report":
           // the report finished generating while the farewell played; only
           // reveal the button once the farewell has actually finished.
@@ -404,6 +454,14 @@ runCodeBtn.addEventListener("click", () => {
   codingOutputEl.className = "coding-output";
   setCodingBusy(true);
   sendCode("run_code");
+});
+
+runTestsBtn.addEventListener("click", () => {
+  if (!codingActive) return;
+  codingOutputEl.textContent = "Running test cases…";
+  codingOutputEl.className = "coding-output";
+  setCodingBusy(true);
+  sendCode("run_tests");
 });
 
 submitCodeBtn.addEventListener("click", () => {

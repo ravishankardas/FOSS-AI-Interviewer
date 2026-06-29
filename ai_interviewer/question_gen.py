@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 import os
 import random
@@ -24,8 +24,9 @@ class CodingQuestion:
     id: str
     title: str
     difficulty: str
-    prompt: str         # shown in the editor panel
-    spoken_intro: str   # read aloud by TTS (shorter, conversational)
+    prompt: str                          # shown in the editor panel
+    spoken_intro: str                    # read aloud by TTS (shorter, conversational)
+    tests: list = field(default_factory=list)  # [{name, stdin, expected}] visible cases
 
 
 # curated coding-question bank lives next to this module

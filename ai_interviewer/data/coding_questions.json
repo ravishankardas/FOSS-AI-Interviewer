@@ -3,35 +3,58 @@
     "id": "two-sum",
     "title": "Two Sum",
     "difficulty": "easy",
-    "prompt": "Given a list of integers `nums` and an integer `target`, return the indices of the two numbers that add up to `target`. You may assume exactly one solution exists and you may not use the same element twice.\n\nExample:\n  nums = [2, 7, 11, 15], target = 9  ->  [0, 1]  (because nums[0] + nums[1] == 9)\n\nRead the input however you like and print the resulting indices.",
-    "spoken_intro": "Let's do a quick coding problem. Given a list of numbers and a target value, find the two numbers that add up to the target and return their positions. Take your time, write it in the editor, and run it when you're ready."
+    "prompt": "Read a line of space-separated integers, then a second line with a single integer `target`. Exactly two of the numbers add up to `target`; print their indices (0-based, ascending) separated by a space.\n\nInput:\n  2 7 11 15\n  9\nOutput:\n  0 1",
+    "spoken_intro": "Let's start with a short coding exercise. You'll read a list of numbers and a target, and print the indices of the two numbers that add up to it. Run it against the test cases, and submit when you're happy.",
+    "tests": [
+      { "name": "example", "stdin": "2 7 11 15\n9\n", "expected": "0 1" },
+      { "name": "first two", "stdin": "3 3 4 5\n6\n", "expected": "0 1" },
+      { "name": "ends", "stdin": "1 5 2 8\n9\n", "expected": "0 3" }
+    ]
   },
   {
     "id": "reverse-string",
     "title": "Reverse a String",
     "difficulty": "easy",
-    "prompt": "Write a function that reverses a string and print the result.\n\nExample:\n  \"hello\"  ->  \"olleh\"\n\nTry to do it in place if your language makes that natural, but any correct approach is fine.",
-    "spoken_intro": "Here's an easy one to warm up. Write code that takes a string and reverses it, then prints the reversed string. Go ahead in the editor."
+    "prompt": "Read a single line of text and print it reversed.\n\nInput:\n  hello\nOutput:\n  olleh",
+    "spoken_intro": "Here's an easy warm-up. Read a line of text and print it reversed. Try the test cases and submit when ready.",
+    "tests": [
+      { "name": "word", "stdin": "hello\n", "expected": "olleh" },
+      { "name": "phrase", "stdin": "ab cd\n", "expected": "dc ba" },
+      { "name": "single", "stdin": "x\n", "expected": "x" }
+    ]
   },
   {
     "id": "fizzbuzz",
     "title": "FizzBuzz",
     "difficulty": "easy",
-    "prompt": "Print the numbers from 1 to 15, one per line. But for multiples of 3 print \"Fizz\" instead of the number, for multiples of 5 print \"Buzz\", and for multiples of both 3 and 5 print \"FizzBuzz\".",
-    "spoken_intro": "Let's do FizzBuzz. Print numbers one through fifteen, but replace multiples of three with Fizz, multiples of five with Buzz, and multiples of both with FizzBuzz. Write it in the editor and run it."
+    "prompt": "Print the numbers from 1 to 15, one per line. For multiples of 3 print \"Fizz\", for multiples of 5 print \"Buzz\", and for multiples of both print \"FizzBuzz\". No input is given.",
+    "spoken_intro": "Let's do FizzBuzz. Print one through fifteen, replacing multiples of three with Fizz, five with Buzz, and both with FizzBuzz. Run the test and submit when ready.",
+    "tests": [
+      { "name": "full", "stdin": "", "expected": "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz" }
+    ]
   },
   {
     "id": "count-vowels",
     "title": "Count Vowels",
     "difficulty": "easy",
-    "prompt": "Given a string, count how many vowels (a, e, i, o, u) it contains, case-insensitive, and print the count.\n\nExample:\n  \"Interview\"  ->  4",
-    "spoken_intro": "Quick string problem. Given some text, count how many vowels it contains, ignoring case, and print the count. Go ahead in the editor."
+    "prompt": "Read a single line of text and print how many vowels (a, e, i, o, u) it contains, case-insensitive.\n\nInput:\n  Interview\nOutput:\n  4",
+    "spoken_intro": "A quick string problem. Read a line of text and print how many vowels it has, ignoring case. Test it and submit when ready.",
+    "tests": [
+      { "name": "word", "stdin": "Interview\n", "expected": "4" },
+      { "name": "caps", "stdin": "AEIOU\n", "expected": "5" },
+      { "name": "none", "stdin": "rhythm\n", "expected": "0" }
+    ]
   },
   {
     "id": "max-in-list",
     "title": "Maximum in a List",
     "difficulty": "easy",
-    "prompt": "Given a list of integers, find and print the largest value without using your language's built-in max function.\n\nExample:\n  [3, 7, 2, 9, 4]  ->  9",
-    "spoken_intro": "Here's a simple one. Given a list of integers, find the largest value, but do it without using the built-in max function. Write it in the editor and run when ready."
+    "prompt": "Read a line of space-separated integers and print the largest one. Do not use your language's built-in max function.\n\nInput:\n  3 7 2 9 4\nOutput:\n  9",
+    "spoken_intro": "Here's a simple one. Read a list of integers and print the largest, without using the built-in max function. Run the tests and submit when you're done.",
+    "tests": [
+      { "name": "example", "stdin": "3 7 2 9 4\n", "expected": "9" },
+      { "name": "negatives", "stdin": "-5 -2 -9\n", "expected": "-2" },
+      { "name": "single", "stdin": "42\n", "expected": "42" }
+    ]
   }
 ]

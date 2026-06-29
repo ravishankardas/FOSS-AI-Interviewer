@@ -83,6 +83,7 @@
         </select>
         <span class="coding-spacer"></span>
         <button id="run-code" type="button" class="restart-btn">Run <span aria-hidden="true">▶</span></button>
+        <button id="run-tests" type="button" class="restart-btn">Run tests <span aria-hidden="true">✓</span></button>
         <button id="submit-code" type="button" class="begin">Submit <span aria-hidden="true">→</span></button>
       </div>
 
@@ -90,7 +91,12 @@
 
       <div class="coding-output-wrap">
         <div class="coding-output-label">Output</div>
-        <pre id="coding-output" class="coding-output">Run your code to see output here.</pre>
+        <pre id="coding-output" class="coding-output">Run your code, or run the test cases below.</pre>
+      </div>
+
+      <div class="coding-tests-wrap">
+        <div class="coding-output-label">Test cases</div>
+        <ul id="coding-tests" class="coding-tests"></ul>
       </div>
     </section>
 

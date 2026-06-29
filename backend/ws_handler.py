@@ -227,6 +227,28 @@ def _result_payload(r) -> dict:
     }
 
 
+async def _run_tests(session: InterviewSession, language: str, code: str, tests: list) -> list:
+    # run the candidate's code against each visible test case and compare stdout
+    # (trimmed). One execution per case, serialized.
+    results = []
+    for i, t in enumerate(tests):
+        name = t.get("name", f"test {i+1}")
+        expected = t.get("expected", "")
+        r = await run_in_executor(session.executor.run, language, code, t.get("stdin", ""))
+        actual = r.stdout
+        err = r.error or r.compile_error or (r.stderr if r.exit_code != 0 else "")
+        passed = (not err) and actual.strip() == expected.strip()
+        results.append({
+            "name": name,
+            "passed": passed,
+            "expected": expected,
+            "actual": actual,
+            "error": err,
+            "timed_out": r.timed_out,
+        })
+    return results
+
+
 def _coding_eval_question(cq, language: str, code: str, output: str) -> Question:
     # fold the problem + submitted code + output into the question so the spoken
     # explanation is scored in context (grading = run + LLM reasoning)
@@ -254,6 +276,9 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
         "prompt": cq.prompt,
         "languages": CODING_LANGUAGES,
         "time_limit": session.cfg.interview.code_time_limit,
+        # expose the visible test cases (without the trailing-newline noise)
+        "tests": [{"name": t.get("name", f"test {i+1}"), "stdin": t.get("stdin", ""),
+                   "expected": t.get("expected", "")} for i, t in enumerate(cq.tests)],
     })
 
     # speak the intro (no listening — the candidate types, doesn't talk yet)
@@ -287,6 +312,16 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
             last_output = result.stdout or result.compile_error or result.stderr or ""
             logger.info(f"[{sid}] ran {last_lang} (exit {result.exit_code})")
             await ws.send_json(_result_payload(result))
+        elif mtype == "run_tests":
+            last_lang = data.get("language", "python")
+            last_code = data.get("code", "")
+            results = await _run_tests(session, last_lang, last_code, cq.tests)
+            last_output = "\n".join(
+                f"{r['name']}: {'PASS' if r['passed'] else 'FAIL'}" for r in results
+            )
+            passed = sum(1 for r in results if r["passed"])
+            logger.info(f"[{sid}] ran tests: {passed}/{len(results)} passed")
+            await ws.send_json({"type": "test_results", "results": results})
         elif mtype == "code_submit":
             last_lang = data.get("language", last_lang)
             last_code = data.get("code", last_code)
@@ -348,10 +383,20 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
         await queue.put((turn, None, intro_audio, None))  # warm-up: transcribe, don't score
         turn += 1
 
-        # by now the background prep is usually finished
+        answered = False
+
+        # coding round first — it runs while the resume parse + question
+        # generation (prep_task) finish in the background, so that time isn't idle
+        if session.cfg.interview.coding_enabled and session.executor is not None:
+            for cq in pick_coding_questions(session.cfg.interview.coding_questions):
+                logger.info(f"[{sid}] === coding: {cq.title} ===")
+                turn, coded = await _coding_turn(ws, session, cq, queue, turn)
+                if coded:
+                    answered = True
+
+        # then the verbal, resume-grounded questions (prep is ready by now)
         questions, first_wav = await prep_task
 
-        answered = False
         for idx, question in enumerate(questions, 1):
             logger.info(f"[{sid}] === question {idx}/{len(questions)} ===")
             await _ask_question(ws, session, question, wav_bytes=first_wav if idx == 1 else None, turn=turn)
@@ -386,15 +431,6 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
                 followup = Question(text=followup_text, topic=question.topic)
                 await queue.put((turn, followup, fu_audio, None))
                 turn += 1
-
-        # coding round: pose problem(s), let them run code, ask a grounded
-        # spoken follow-up about what they wrote
-        if (session.cfg.interview.coding_enabled and session.executor is not None):
-            for cq in pick_coding_questions(session.cfg.interview.coding_questions):
-                logger.info(f"[{sid}] === coding: {cq.title} ===")
-                turn, coded = await _coding_turn(ws, session, cq, queue, turn)
-                if coded:
-                    answered = True
 
         # speak the farewell now so its playback masks the final transcription,
         # evaluation, and report generation that still have to finish
