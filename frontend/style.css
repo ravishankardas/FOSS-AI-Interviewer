@@ -344,6 +344,19 @@ body {
 }
 .CodeMirror-focused { border-color: var(--amber-d); }
 
+/* autocomplete popup — match the dark theme */
+.CodeMirror-hints {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  z-index: 50;
+}
+.CodeMirror-hint { color: var(--ink); padding: 0.15rem 0.6rem; }
+li.CodeMirror-hint-active { background: var(--amber); color: #1a1206; }
+
 .coding-output-wrap { margin-top: 1.25rem; }
 .coding-output-label {
   font-family: var(--mono);

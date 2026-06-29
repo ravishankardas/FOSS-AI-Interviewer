@@ -189,6 +189,43 @@ function showError(msg) {
 }
 
 // ── coding round ──────────────────────────────────────
+const KEYWORDS = {
+  python: [
+    "def", "return", "if", "elif", "else", "for", "while", "in", "range", "len",
+    "print", "input", "import", "from", "class", "True", "False", "None", "and",
+    "or", "not", "is", "try", "except", "finally", "with", "as", "lambda", "map",
+    "filter", "sorted", "reversed", "enumerate", "zip", "int", "str", "list",
+    "dict", "set", "tuple", "float", "abs", "min", "max", "sum", "append",
+  ],
+  "c++": [
+    "#include", "int", "long", "double", "float", "char", "bool", "void",
+    "return", "if", "else", "for", "while", "do", "switch", "case", "break",
+    "continue", "cin", "cout", "endl", "std", "vector", "string", "sort", "swap",
+    "push_back", "size", "begin", "end", "auto", "const", "struct", "class",
+    "public", "private", "using", "namespace", "true", "false", "nullptr",
+  ],
+};
+
+// merge language keywords with identifiers already in the buffer
+function completer(cm) {
+  const cur = cm.getCursor();
+  const token = cm.getTokenAt(cur);
+  let word = /[\w#]+/.test(token.string) ? token.string : "";
+  const start = word ? token.start : cur.ch;
+  const lang = codingLangEl.value || "python";
+  const fromBuffer = cm.getValue().match(/[A-Za-z_]\w{2,}/g) || [];
+  const pool = new Set([...(KEYWORDS[lang] || []), ...fromBuffer]);
+  const list = [...pool]
+    .filter((w) => w.toLowerCase().startsWith(word.toLowerCase()) && w !== word)
+    .sort()
+    .slice(0, 30);
+  return {
+    list,
+    from: CodeMirror.Pos(cur.line, start),
+    to: CodeMirror.Pos(cur.line, cur.ch),
+  };
+}
+
 function ensureEditor() {
   if (editor) return editor;
   editor = CodeMirror.fromTextArea($("code-editor"), {
@@ -197,7 +234,27 @@ function ensureEditor() {
     lineNumbers: true,
     indentUnit: 4,
     tabSize: 4,
+    smartIndent: true,       // mode-aware auto-indent (e.g. after `:` in Python)
+    electricChars: true,
+    autoCloseBrackets: true, // auto-insert closing ) ] } " '
+    matchBrackets: true,
     autofocus: true,
+    extraKeys: {
+      "Ctrl-Space": (cm) => cm.showHint({ hint: completer, completeSingle: false }),
+      Tab: (cm) => {
+        if (cm.somethingSelected()) cm.indentSelection("add");
+        else cm.replaceSelection(" ".repeat(cm.getOption("indentUnit")), "end");
+      },
+      Enter: "newlineAndIndent",
+    },
+  });
+  // pop completions as you type a word (not on every keystroke)
+  editor.on("inputRead", (cm, change) => {
+    if (cm.state.completionActive) return;
+    const ch = change.text[0];
+    if (ch && /[A-Za-z_]/.test(ch)) {
+      cm.showHint({ hint: completer, completeSingle: false });
+    }
   });
   return editor;
 }
