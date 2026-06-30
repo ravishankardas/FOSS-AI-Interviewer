@@ -4,10 +4,16 @@ An open-source, voice-based AI interviewer. It parses a candidate's resume,
 conducts a spoken interview over a **STT → LLM → TTS** pipeline, and produces a
 structured hiring report at the end.
 
+The verbal round is **adaptive** — each question is chosen on the fly from how
+the candidate answered the last one (struggled → easier or a new topic; nailed
+it → go deeper), so it behaves like a real interviewer rather than reading a
+fixed list.
+
 It also runs a **coding round**: the candidate solves a problem in an in-browser
 editor, runs it against visible test cases (executed in a sandboxed
 [Piston](https://github.com/engineer-man/piston) engine), and the interviewer
-asks a spoken follow-up about their code.
+asks a spoken follow-up about their code. Submissions are graded against
+**hidden test cases** too (never sent to the browser) to discourage hard-coding.
 
 Runs locally on CPU (GPU optional). Pluggable backends — the **LLM** is local
 `llama.cpp` or Gemini, and **STT** is local `faster-whisper` or hosted Groq
@@ -18,7 +24,7 @@ Runs locally on CPU (GPU optional). Pluggable backends — the **LLM** is local
 ## How it works
 
 ```
-Resume (PDF) ──► parse ──► generate questions   (in the background)
+Resume (PDF) ──► parse ──► first adaptive question   (in the background)
        │
        ▼
   greeting + self-intro
@@ -28,19 +34,20 @@ Resume (PDF) ──► parse ──► generate questions   (in the background)
 │  editor in browser (CodeMirror)             │
 │  Run / Run tests ──► Piston sandbox ──►      │
 │                       stdout + pass/fail     │
-│  submit ──► grounded spoken follow-up        │
+│  submit ──► run visible + HIDDEN tests       │
+│  grounded spoken follow-up                   │
 │  graded on code + test results (coding rubric)│
 └──────────────────────────────────────────────┘
        │
        ▼
-┌─────────────  verbal questions  ────────────┐
+┌─────────────  verbal questions (adaptive) ──┐
 │  TTS speaks question  (Piper)               │
 │  mic audio ──► VAD (Silero) ──► STT (Groq/   │
 │                                  Whisper)    │
-│  conversational follow-up: acknowledge the   │
-│  answer, then ask deeper. LLM tokens are     │
-│  streamed sentence-by-sentence into TTS so   │
-│  playback starts almost immediately          │
+│  one LLM call rates the answer (mastery) AND │
+│  picks the next question targeted to it:     │
+│  struggled → easier/pivot, nailed → deeper   │
+│  (silent? the bot nudges twice, then ends)   │
 └──────────────────────────────────────────────┘
        │
        ▼
@@ -224,10 +231,12 @@ venv\Scripts\python.exe -m backend.test_client docs/Ravi_AI.pdf Ravi
 | JSON `listening` | start streaming mic audio |
 | JSON `listening_stop` | VAD detected end; stop streaming |
 | JSON `transcribed` | `{ "text": "..." }` what was heard |
-| JSON `coding_question` | `{ "title", "prompt", "languages", "starter", "tests", "time_limit" }` show the editor |
+| JSON `coding_question` | `{ "title", "prompt", "languages", "starter", "tests", "time_limit" }` show the editor (only *visible* tests; hidden tests are never sent) |
 | JSON `run_result` | `{ "stdout", "stderr", "compile_error", "exit_code", "timed_out" }` |
-| JSON `test_results` | `{ "results": [{ "name", "passed", "expected", "actual", "error" }] }` |
+| JSON `test_results` | `{ "results": [{ "name", "passed", "expected", "actual", "error" }] }` (visible tests) |
+| JSON `engine_error` | `{ "message": "..." }` code-execution engine unreachable (not the candidate's code) |
 | JSON `report` | `{ "markdown": "..." }` final report |
+| JSON `reload` | interview ended early (e.g. silence) — client resets itself |
 | JSON `error` | `{ "message": "..." }` |
 
 ---
@@ -237,7 +246,7 @@ venv\Scripts\python.exe -m backend.test_client docs/Ravi_AI.pdf Ravi
 ```
 ai_interviewer/        core pipeline (pip package)
   parser.py            PDF → ResumeData
-  question_gen.py      questions, follow-ups, coding-question bank
+  question_gen.py      adaptive questions, follow-ups, coding-question bank
   sentence_splitter.py incremental splitter for streaming TTS
   vad.py               Silero VAD
   stt.py               local Whisper / Groq client + fallback
@@ -247,7 +256,7 @@ ai_interviewer/        core pipeline (pip package)
   report.py            evaluation (verbal + coding rubric) + markdown report
   config.py            config.yaml loader
   data/
-    coding_questions.json  coding problem bank (prompt, starter, tests)
+    coding_questions.json  coding problem bank (prompt, starter, visible + hidden tests)
 backend/
   main.py              FastAPI app, /upload, /ws
   session.py           per-connection InterviewSession state
@@ -257,6 +266,8 @@ backend/
 frontend/
   index.html, app.js, style.css   browser UI (vanilla JS + CodeMirror editor)
 scripts/
+  build_coding_bank.py  solver-driven authoring of coding problems (computes
+                        visible + hidden test outputs from a reference solver)
   bench_tts.py, bench_latency.py  latency benchmarks
 docs/
   DESIGN.md            full design document
@@ -275,14 +286,17 @@ config.yaml
 - [x] Report generation + markdown export
 - [x] WebSocket backend (tested end-to-end)
 - [x] Browser frontend (`ai-interviewer --start`)
-- [x] Silence timeout while listening
 - [x] Background transcription/evaluation (overlapped with the interview)
 - [x] Hosted Groq STT with automatic local-Whisper fallback (provider toggle)
+- [x] Adaptive questioning — next question picked from the last answer's mastery
 - [x] Grounded, conversational follow-ups (acknowledge then ask)
 - [x] Streaming follow-up: LLM tokens → per-sentence TTS (~4x faster to first audio)
+- [x] Silence handling: nudge the candidate twice, then end gracefully
 - [x] Coding round: in-browser editor, sandboxed Piston execution, visible test cases
+- [x] Hidden test cases for grading (anti-gaming) + solver-driven bank builder
 - [x] Coding graded on correctness (test results) via a dedicated coding rubric
 - [x] Combined report (coding + verbal) with evidence quotes
+- [x] Resilient to a down execution engine; mid-interview restart button
 
 See `handover.md` for current working notes.
 
