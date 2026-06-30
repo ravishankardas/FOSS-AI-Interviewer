@@ -23,38 +23,35 @@ Runs locally on CPU (GPU optional). Pluggable backends — the **LLM** is local
 
 ## How it works
 
-```
-Resume (PDF) ──► parse ──► first adaptive question   (in the background)
-       │
-       ▼
-  greeting + self-intro
-       │
-       ▼
-┌──────────────  coding round  ───────────────┐
-│  editor in browser (CodeMirror)             │
-│  Run / Run tests ──► Piston sandbox ──►      │
-│                       stdout + pass/fail     │
-│  submit ──► run visible + HIDDEN tests       │
-│  grounded spoken follow-up                   │
-│  graded on code + test results (coding rubric)│
-└──────────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────  verbal questions (adaptive) ──┐
-│  TTS speaks question  (Piper)               │
-│  mic audio ──► VAD (Silero) ──► STT (Groq/   │
-│                                  Whisper)    │
-│  one LLM call rates the answer (mastery) AND │
-│  picks the next question targeted to it:     │
-│  struggled → easier/pivot, nailed → deeper   │
-│  (silent? the bot nudges twice, then ends)   │
-└──────────────────────────────────────────────┘
-       │
-       ▼
-  LLM summary + recommendation (coding + verbal combined)
-       │
-       ▼
-  Markdown interview report (with evidence quotes)
+```mermaid
+flowchart TD
+    A([Resume PDF]) --> B[Parse résumé +<br/>first adaptive question<br/><i>in the background</i>]
+    B --> C[Greeting + self-intro]
+    C --> CodingIn
+
+    subgraph Coding ["Coding round"]
+        direction TB
+        CodingIn[In-browser editor<br/>CodeMirror] --> Run[Run / Run tests<br/>Piston sandbox]
+        Run --> Submit[Submit → run<br/>visible + HIDDEN tests]
+        Submit --> CFollowUp[Grounded spoken follow-up<br/>graded on code + tests]
+    end
+
+    CFollowUp --> Ask
+
+    subgraph Verbal ["Verbal round · adaptive"]
+        direction TB
+        Ask[TTS speaks question<br/>Piper] --> Hear[Mic → VAD Silero →<br/>STT Groq / Whisper]
+        Hear --> Pick[One LLM call:<br/>rate answer + pick next<br/>struggled → easier · nailed → deeper]
+        Pick -->|more questions| Ask
+    end
+
+    Pick --> Sum[LLM summary + recommendation<br/>coding + verbal combined]
+    Sum --> Report([Markdown report<br/>with evidence quotes])
+
+    classDef io fill:#E8A33D,stroke:#b97f27,color:#191510,font-weight:bold;
+    classDef stage fill:#241d14,stroke:#322a20,color:#ECE6DA;
+    class A,Report io;
+    class B,C,CodingIn,Run,Submit,CFollowUp,Ask,Hear,Pick,Sum stage;
 ```
 
 Two ways to run it:
