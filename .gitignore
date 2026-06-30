@@ -225,7 +225,7 @@ reports/
 *.onnx
 frontend/node_modules/
 frontend/dist/
-docs/
+docs/*.pdf
 store.py
 CLAUDE.md
 venv_wsl
