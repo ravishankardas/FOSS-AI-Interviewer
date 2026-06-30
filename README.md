@@ -24,7 +24,7 @@ Runs locally on CPU (GPU optional). Pluggable backends — the **LLM** is local
 ## How it works
 
 <p align="center">
-  <img src="docs/architecture.svg" alt="FOSS AI Interviewer architecture" width="540" />
+  <img src="docs/architecture-schematic.svg" alt="FOSS AI Interviewer architecture" width="540" />
 </p>
 
 Two ways to run it:
