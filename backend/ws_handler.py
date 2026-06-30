@@ -5,7 +5,8 @@ from ai_interviewer.config import AppConfig
 from ai_interviewer.parser import parse_resume
 from ai_interviewer.question_gen import (
     Question,
-    generate_questions,
+    Turn,
+    generate_adaptive_question,
     generate_followup_stream,
     generate_code_followup_stream,
     pick_coding_questions,
@@ -14,15 +15,76 @@ from ai_interviewer.report import evaluate_answer, evaluate_code, generate_repor
 from ai_interviewer.sentence_splitter import SentenceSplitter
 from .session import InterviewSession, SessionState
 import json
+import struct
 import numpy as np
 import torch
 from fastapi import FastAPI
 from loguru import logger  # type: ignore
 
 
+class EngineUnavailable(Exception):
+    """The code-execution engine (Piston) couldn't be reached for a test run."""
+
+
+# shown to the candidate when the execution engine is down — makes clear it's
+# infrastructure, not their code
+ENGINE_DOWN_MSG = (
+    "The code execution service is temporarily unavailable, so tests couldn't "
+    "run. This is on our end, not your code."
+)
+
+
+class CandidateAbandoned(Exception):
+    """The candidate went silent through repeated nudges; end the interview."""
+
+
+# if the candidate doesn't start speaking within this many seconds, nudge them;
+# after IDLE_MAX_NUDGES unanswered nudges, end the interview gracefully.
+IDLE_NUDGE_SECONDS = 5.0
+IDLE_MAX_NUDGES = 2
+IDLE_NUDGES = [
+    "Sorry, are you still there?",
+    "I still can't hear you — are you on the line?",
+]
+ABANDON_MSG = (
+    "It looks like I've lost you, so I'll end the interview here. "
+    "Feel free to start again whenever you're ready."
+)
+
+
 async def run_in_executor(fn, *args):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, fn, *args)
+
+
+def _wav_seconds(wav: bytes) -> float:
+    # playback duration of a PCM WAV from its byte-rate. Piper writes a streaming
+    # header whose declared data-chunk size can be a 0/placeholder, so prefer the
+    # ACTUAL bytes after the data chunk and only trust the declared size if sane.
+    try:
+        if len(wav) < 44 or wav[:4] != b"RIFF":
+            return 0.0
+        byte_rate = struct.unpack_from("<I", wav, 28)[0]
+        idx = wav.find(b"data", 12)
+        if idx == -1 or byte_rate == 0:
+            return 0.0
+        actual = len(wav) - (idx + 8)            # payload bytes physically present
+        declared = struct.unpack_from("<I", wav, idx + 4)[0]
+        size = declared if 0 < declared <= actual else actual
+        return size / byte_rate
+    except Exception:
+        return 0.0
+
+
+async def _send_audio(ws: WebSocket, session: InterviewSession, wav: bytes):
+    # send a TTS clip and advance session.speaking_until — the server's estimate of
+    # when the client will FINISH playing everything queued so far. The silence
+    # timer in _capture_answer starts from that point, so we never nudge while the
+    # bot is still talking. Clips queue back-to-back client-side (playbackChain).
+    loop = asyncio.get_event_loop()
+    base = max(loop.time(), getattr(session, "speaking_until", 0.0))
+    session.speaking_until = base + _wav_seconds(wav)
+    await ws.send_bytes(data=wav)
 
 
 async def _aiter_blocking(make_gen):
@@ -62,7 +124,7 @@ async def _speak_stream(ws: WebSocket, session: InterviewSession, make_gen) -> s
 
     async def _say(sentence: str):
         wav = await run_in_executor(session.tts.synthesize, sentence)
-        await ws.send_bytes(data=wav)
+        await _send_audio(ws, session, wav)
 
     async for token in _aiter_blocking(make_gen):
         parts.append(token)
@@ -102,7 +164,7 @@ async def _ask_question(ws: WebSocket, session: InterviewSession, question: Ques
     logger.info(f"[{session.session_id[:8]}] asking: {question.text}")
     if wav_bytes is None:
         wav_bytes = await run_in_executor(session.tts.synthesize, question.text)
-    await ws.send_bytes(data=wav_bytes)
+    await _send_audio(ws, session, wav_bytes)
 
     await ws.send_json({"type": "listening", "turn": turn})
 
@@ -125,17 +187,45 @@ async def _capture_answer(ws: WebSocket, session: InterviewSession):
     loop = asyncio.get_event_loop()
     deadline = loop.time() + session.cfg.interview.answer_time_limit
 
+    # nudge a silent candidate a couple of times, then give up. The countdown only
+    # starts after the bot has finished SPEAKING: session.speaking_until is the
+    # server's estimate of when the client finishes playing the question (or a
+    # nudge), so we never nudge over our own audio. _speak_line below advances it.
+    nudges_used = 0
+    silence_deadline = max(loop.time(), getattr(session, "speaking_until", 0.0)) + IDLE_NUDGE_SECONDS
+
     while not speech_ended:
-        remaining = deadline - loop.time()
-        if remaining <= 0:
+        now = loop.time()
+        if now >= deadline:
             logger.info(f"[{sid}] answer timed out after {session.cfg.interview.answer_time_limit}s")
             break
 
+        # silence nudging is driven by wall-clock time, NOT by ws.receive timing
+        # out — the client streams mic audio continuously (silent frames included),
+        # so receive() keeps returning and never times out. Check the elapsed time
+        # against the nudge deadline each pass, while no speech has started yet.
+        if not speech_started and now >= silence_deadline:
+            if nudges_used >= IDLE_MAX_NUDGES:
+                logger.info(f"[{sid}] no response after {IDLE_MAX_NUDGES} nudges — ending interview")
+                await ws.send_json({"type": "listening_stop"})
+                raise CandidateAbandoned()
+            logger.info(f"[{sid}] silence — nudging candidate ({nudges_used + 1}/{IDLE_MAX_NUDGES})")
+            await _speak_line(ws, session, IDLE_NUDGES[nudges_used])  # advances speaking_until
+            session.state = SessionState.LISTENING
+            session.vad.reset()  # drop any frames captured during the nudge playback
+            nudges_used += 1
+            # re-arm after the nudge finishes playing, not while it's still talking
+            silence_deadline = max(loop.time(), session.speaking_until) + IDLE_NUDGE_SECONDS
+            continue
+
+        # wake up by the next nudge checkpoint even if the stream stalls entirely
+        wait = (deadline if speech_started else min(deadline, silence_deadline)) - now
         try:
-            msg = await asyncio.wait_for(ws.receive(), timeout=remaining)
+            msg = await asyncio.wait_for(ws.receive(), timeout=max(0.0, wait))
         except asyncio.TimeoutError:
-            logger.info(f"[{sid}] answer timed out after {session.cfg.interview.answer_time_limit}s")
-            break
+            # stream stalled (no frames at all) — loop back; the checks at the top
+            # handle the overall deadline and the silence nudges
+            continue
 
         if msg["type"] == "websocket.disconnect":
             raise WebSocketDisconnect(msg.get("code", 1000))
@@ -234,7 +324,7 @@ async def _speak_line(ws: WebSocket, session: InterviewSession, text: str):
     # speak a line without listening afterwards (used for transitions/segues)
     session.state = SessionState.SPEAKING
     wav = await run_in_executor(session.tts.synthesize, text)
-    await ws.send_bytes(data=wav)
+    await _send_audio(ws, session, wav)
 
 
 def _result_payload(r) -> dict:
@@ -252,13 +342,20 @@ def _result_payload(r) -> dict:
 async def _run_tests(session: InterviewSession, language: str, code: str, tests: list) -> list:
     # run the candidate's code against each visible test case and compare stdout
     # (trimmed). One execution per case, serialized.
+    #
+    # raises EngineUnavailable if the execution engine can't be reached, so the
+    # caller can say "engine down" instead of reporting every case as a failure
+    # (an engine fault is not the candidate's code being wrong).
     results = []
     for i, t in enumerate(tests):
         name = t.get("name", f"test {i+1}")
         expected = t.get("expected", "")
         r = await run_in_executor(session.executor.run, language, code, t.get("stdin", ""))
+        if r.error:
+            # transport/engine failure (ExecResult.error is never set by user code)
+            raise EngineUnavailable(r.error)
         actual = r.stdout
-        err = r.error or r.compile_error or (r.stderr if r.exit_code != 0 else "")
+        err = r.compile_error or (r.stderr if r.exit_code != 0 else "")
         passed = (not err) and actual.strip() == expected.strip()
         results.append({
             "name": name,
@@ -294,7 +391,7 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
 
     # speak the intro (no listening — the candidate types, doesn't talk yet)
     intro_wav = await run_in_executor(session.tts.synthesize, cq.spoken_intro)
-    await ws.send_bytes(data=intro_wav)
+    await _send_audio(ws, session, intro_wav)
 
     last_lang, last_code, last_output = "python", "", ""
 
@@ -320,13 +417,22 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
             last_lang = data.get("language", "python")
             last_code = data.get("code", "")
             result = await run_in_executor(session.executor.run, last_lang, last_code)
+            if result.error:
+                logger.warning(f"[{sid}] run skipped — engine down: {result.error}")
+                await ws.send_json({"type": "engine_error", "message": ENGINE_DOWN_MSG})
+                continue
             last_output = result.stdout or result.compile_error or result.stderr or ""
             logger.info(f"[{sid}] ran {last_lang} (exit {result.exit_code})")
             await ws.send_json(_result_payload(result))
         elif mtype == "run_tests":
             last_lang = data.get("language", "python")
             last_code = data.get("code", "")
-            results = await _run_tests(session, last_lang, last_code, cq.tests)
+            try:
+                results = await _run_tests(session, last_lang, last_code, cq.tests)
+            except EngineUnavailable as exc:
+                logger.warning(f"[{sid}] tests skipped — engine down: {exc}")
+                await ws.send_json({"type": "engine_error", "message": ENGINE_DOWN_MSG})
+                continue
             last_output = "\n".join(
                 f"{r['name']}: {'PASS' if r['passed'] else 'FAIL'}" for r in results
             )
@@ -352,17 +458,30 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
     await ws.send_json({"type": "listening", "turn": turn})
     audio = await _capture_answer(ws, session)
 
-    # run the visible tests against the submitted code (authoritative correctness
-    # signal for scoring) — off the critical path, the candidate already answered
-    results = await _run_tests(session, last_lang, last_code, cq.tests) if cq.tests else []
+    # run the FULL suite (visible + hidden) against the submitted code as the
+    # authoritative correctness signal for scoring — hidden cases never reached
+    # the browser, so they can't be gamed. Off the critical path; the candidate
+    # already answered.
+    scoring_tests = list(cq.tests) + list(cq.hidden_tests)
+    try:
+        results = await _run_tests(session, last_lang, last_code, scoring_tests) if scoring_tests else []
+    except EngineUnavailable as exc:
+        # engine down at submit: don't fabricate a 0/N. Grade on code + explanation
+        # only (evaluate_code treats empty results as "no automated tests").
+        logger.warning(f"[{sid}] scoring without tests — engine down: {exc}")
+        results = []
+    # results align with scoring_tests order: visible first, then hidden
+    visible_results = results[:len(cq.tests)]
+    hidden_results = results[len(cq.tests):]
     passed = sum(1 for r in results if r["passed"])
-    logger.info(f"[{sid}] submitted code scored {passed}/{len(results)} tests")
+    logger.info(f"[{sid}] submitted code scored {passed}/{len(results)} tests "
+                f"({len(cq.tests)} visible + {len(cq.hidden_tests)} hidden)")
 
     # grade with the dedicated coding rubric: problem + code + test outcome +
     # the follow-up Q and the candidate's spoken answer (filled in by the worker)
     def grader(answer_text, _cq=cq, _lang=last_lang, _code=last_code,
-               _results=results, _fq=followup_text):
-        return evaluate_code(_cq.title, _cq.prompt, _lang, _code, _results, _fq,
+               _vis=visible_results, _hid=hidden_results, _fq=followup_text):
+        return evaluate_code(_cq.title, _cq.prompt, _lang, _code, _vis, _hid, _fq,
                              answer_text, session.llm)
 
     await queue.put((turn, None, audio, None, grader))
@@ -374,19 +493,17 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
 
     sid = session.session_id[:8]
 
-    # prepare the interview (resume parse + question gen + first-question TTS)
-    # in the background while the candidate gives their introduction
+    # prepare the interview (resume parse + first adaptive question + its TTS)
+    # in the background while the candidate gives their introduction. The rest
+    # of the questions are chosen on the fly, one per turn, from how they answer.
     async def _prepare():
         logger.info(f"[{sid}] (bg) parsing resume: {session.resume_path}")
         resume = await run_in_executor(parse_resume, session.resume_path, session.llm)
-        logger.info(f"[{sid}] (bg) generating questions...")
-        questions = await run_in_executor(generate_questions, resume, session.cfg.interview, session.llm)
-        logger.info(f"[{sid}] (bg) generated {len(questions)} questions")
-        first_wav = None
-        if questions:
-            first_wav = await run_in_executor(session.tts.synthesize, questions[0].text)
-            logger.info(f"[{sid}] (bg) first question audio ready")
-        return questions, first_wav
+        logger.info(f"[{sid}] (bg) generating first question...")
+        first_q, _ = await run_in_executor(generate_adaptive_question, resume, [], session.llm)
+        first_wav = await run_in_executor(session.tts.synthesize, first_q.text)
+        logger.info(f"[{sid}] (bg) first question audio ready")
+        return resume, first_q, first_wav
 
     prep_task = asyncio.create_task(_prepare())
 
@@ -417,47 +534,45 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
                 if coded:
                     answered = True
 
-        # then the verbal, resume-grounded questions (prep is ready by now)
-        questions, first_wav = await prep_task
+        # then the verbal questions — chosen adaptively, one per turn, from how
+        # the candidate answers (prep gave us the resume + the first question)
+        resume, question, first_wav = await prep_task
 
         # natural segue out of the coding round into the conversation
-        if answered and questions:
+        if answered:
             await _speak_line(ws, session, TRANSITION_TO_QUESTIONS)
 
-        for idx, question in enumerate(questions, 1):
-            logger.info(f"[{sid}] === question {idx}/{len(questions)} ===")
+        max_q = session.cfg.interview.max_questions
+        history: list[Turn] = []
+        for idx in range(1, max_q + 1):
+            logger.info(f"[{sid}] === question {idx}/{max_q} [{question.topic}] ===")
             await _ask_question(ws, session, question, wav_bytes=first_wav if idx == 1 else None, turn=turn)
             audio = await _capture_answer(ws, session)
             if audio is not None:
                 answered = True
 
-            do_followup = session.cfg.interview.follow_up_enabled and audio is not None
-            answer_text = None
-            if do_followup:
-                # transcribe on the critical path to ground the follow-up. Groq is
-                # near-instant; the streamed follow-up below masks the rest.
+            # transcribe on the critical path: the adaptive picker needs the
+            # answer to choose the next question. Groq is near-instant.
+            answer_text = ""
+            if audio is not None:
                 answer_text = await run_in_executor(session.stt.transcribe, audio)
-                logger.info(f"[{sid}] grounding follow-up on: {answer_text!r}")
+                logger.info(f"[{sid}] answer: {answer_text!r}")
 
-            # hand off eval (reuse answer_text if we already transcribed it)
+            # hand off the rich report scoring to the background worker
             await queue.put((turn, question, audio, answer_text, None))
+            history.append(Turn(question=question, answer=answer_text))
             turn += 1
 
-            if do_followup and answer_text and answer_text.strip():
-                # stream the follow-up: LLM tokens → sentences → TTS, sentence by
-                # sentence, so the candidate hears the first sentence while the
-                # rest is still being generated. Replaces the old filler hack.
-                logger.info(f"[{sid}] --- streaming follow-up...")
-                followup_text = await _speak_stream(
-                    ws, session,
-                    lambda q=question, a=answer_text: generate_followup_stream(q, a, session.llm),
+            # adaptively pick the next question. The same call rates the answer
+            # just given (cheap steering signal) and targets the next question
+            # to it — struggled → easier/pivot, nailed it → deeper/harder.
+            if idx < max_q:
+                question, mastery = await run_in_executor(
+                    generate_adaptive_question, resume, history, session.llm
                 )
-                logger.info(f"[{sid}] --- follow-up spoken: {followup_text!r}")
-                await ws.send_json({"type": "listening", "turn": turn})
-                fu_audio = await _capture_answer(ws, session)
-                followup = Question(text=followup_text, topic=question.topic)
-                await queue.put((turn, followup, fu_audio, None, None))
-                turn += 1
+                history[-1].mastery = mastery
+                first_wav = None
+                logger.info(f"[{sid}] last answer mastery {mastery}/10 → next [{question.topic}]")
 
         # speak the farewell now so its playback masks the final transcription,
         # evaluation, and report generation that still have to finish
@@ -465,12 +580,26 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
         if answered:
             logger.info(f"[{sid}] speaking farewell")
             farewell_wav = await run_in_executor(session.tts.synthesize, FAREWELL.format(name=session.candidate_name))
-            await ws.send_bytes(data=farewell_wav)
+            await _send_audio(ws, session, farewell_wav)
 
         # drain the worker so all transcriptions/evals finish
         logger.info(f"[{sid}] all questions asked, waiting for transcription/eval to finish...")
         await queue.put(None)
         await worker
+    except CandidateAbandoned:
+        # the candidate went silent through repeated nudges; say goodbye and tell
+        # the client to reset itself — no report, no error banner
+        logger.info(f"[{sid}] candidate unresponsive — ending interview early")
+        try:
+            await _speak_line(ws, session, ABANDON_MSG)
+        except Exception:
+            pass
+        # send the reload independently so a TTS hiccup above can't swallow it
+        try:
+            await ws.send_json({"type": "reload"})
+        except Exception:
+            pass
+        return
     finally:
         # don't leak background tasks if the interview errors out mid-way
         for task in (worker, prep_task):

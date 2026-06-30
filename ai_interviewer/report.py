@@ -83,14 +83,29 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
     return AnswerEval(question=question.text, topic=question.topic, answer=answer, score=data['score'], feedback=data['feedback'], evidence=data.get('evidence', ''))
 
 
-def evaluate_code(title: str, problem: str, language: str, code: str, results: list,
+def evaluate_code(title: str, problem: str, language: str, code: str,
+                  visible_results: list, hidden_results: list,
                   followup_q: str, followup_a: str, llm: Any) -> AnswerEval:
     # dedicated coding grader: correctness-first, not bound by the lenient verbal
     # rubric. Judges the problem + actual code + test outcome + spoken explanation.
-    passed = sum(1 for r in results if r["passed"])
-    total = len(results)
-    lines = "\n".join(f"  - {r['name']}: {'PASS' if r['passed'] else 'FAIL'}" for r in results)
-    test_block = f"{passed}/{total} visible tests passed\n{lines}" if total else "No automated tests available."
+    #
+    # hidden_results never reach the candidate's report — they sharpen the score
+    # (anti-gaming) but are fed to the grader only as an aggregate pass ratio, and
+    # the report's answer line shows the VISIBLE count alone.
+    vpass, vtotal = sum(1 for r in visible_results if r["passed"]), len(visible_results)
+    hpass, htotal = sum(1 for r in hidden_results if r["passed"]), len(hidden_results)
+    total = vtotal + htotal
+    passed = vpass + hpass
+
+    if total:
+        vlines = "\n".join(f"  - {r['name']}: {'PASS' if r['passed'] else 'FAIL'}"
+                           for r in visible_results)
+        test_block = f"{vpass}/{vtotal} visible tests passed\n{vlines}"
+        if htotal:
+            # aggregate only — never the hidden cases' names or I/O
+            test_block += f"\nHidden tests (not shown to candidate): {hpass}/{htotal} passed"
+    else:
+        test_block = "No automated tests available."
 
     system = """
         You are an expert technical interviewer grading a candidate's solution to a
@@ -125,7 +140,8 @@ def evaluate_code(title: str, problem: str, language: str, code: str, results: l
     """
     response = llm.complete(prompt=prompt, system=system, response_schema=_EvalSchema)
     data = json.loads(response)
-    answer = f"[{language}] solution — {passed}/{total} tests passed.\nExplanation: {followup_a}"
+    # report shows only what the candidate could see; hidden cases stay out of it
+    answer = f"[{language}] solution — {vpass}/{vtotal} tests passed.\nExplanation: {followup_a}"
     return AnswerEval(question=f"{title} (coding)", topic="coding", answer=answer,
                       score=data["score"], feedback=data["feedback"], evidence=data.get("evidence", ""))
 

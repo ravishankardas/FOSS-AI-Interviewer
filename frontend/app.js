@@ -508,6 +508,20 @@ async function startInterview(e) {
             "coding-output " + (passed === msg.results.length ? "ok" : "err");
           break;
         }
+        case "engine_error":
+          // execution engine down: tell the candidate it's infra, not their
+          // code, and clear any stale pass/fail so nothing reads as a failure.
+          setCodingBusy(false);
+          renderTests(null);
+          codingOutputEl.textContent = msg.message;
+          codingOutputEl.className = "coding-output err";
+          break;
+        case "reload":
+          // interview ended early (e.g. silence). Let the goodbye finish playing,
+          // then reset the whole app by reloading.
+          await playbackChain;
+          location.reload();
+          break;
         case "report":
           // the report finished generating while the farewell played; only
           // reveal the button once the farewell has actually finished.
@@ -615,3 +629,16 @@ $("download").addEventListener("click", () => {
 
 // Start a fresh interview: reload to reset all UI + audio state cleanly.
 $("restart").addEventListener("click", () => location.reload());
+
+// Mid-interview restart (interview + coding stages): confirm first, since this
+// abandons the in-progress session, then reload for the same clean reset.
+["restart-interview", "restart-coding"].forEach((id) => {
+  const el = $(id);
+  if (el) {
+    el.addEventListener("click", () => {
+      if (confirm("Restart the interview? Your current progress will be lost.")) {
+        location.reload();
+      }
+    });
+  }
+});

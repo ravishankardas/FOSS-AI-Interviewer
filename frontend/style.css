@@ -39,13 +39,19 @@ body {
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+.brand { display: inline-flex; align-items: center; gap: 0.55rem; }
+.logo {
+  display: block;
+  flex: none;
+  filter: drop-shadow(0 0 6px rgba(232, 163, 61, 0.35));
 }
 .wordmark { color: var(--ink); font-weight: 500; }
 .topbar-meta { color: var(--faint); }
@@ -510,6 +516,11 @@ li.CodeMirror-hint-active { background: var(--amber); color: #1a1206; }
 }
 .restart-btn:hover { color: var(--ink); border-color: var(--muted); }
 .restart-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+
+/* escape hatch to abandon an in-progress interview (interview stage only;
+   the coding-toolbar variant keeps its own layout) */
+#interview .restart-abort { margin-top: 2.5rem; opacity: 0.65; }
+#interview .restart-abort:hover { opacity: 1; }
 
 /* ── error ────────────────────────────── */
 .error {

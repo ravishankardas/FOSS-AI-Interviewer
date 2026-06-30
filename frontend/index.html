@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FOSS AI Interviewer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M7 3.5 L19 3.5 A4.5 4.5 0 0 1 23.5 8 L23.5 14 A4.5 4.5 0 0 1 19 18.5 L12 18.5 L7.5 22.5 L7.5 18.5 L7 18.5 A4.5 4.5 0 0 1 2.5 14 L2.5 8 A4.5 4.5 0 0 1 7 3.5 Z' fill='%23191510' stroke='%23E8A33D' stroke-width='1.4' stroke-linejoin='round'/%3E%3Cg stroke='%23ECE6DA' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='8.5' y1='13.5' x2='8.5' y2='8.5'/%3E%3Cline x1='12' y1='14.8' x2='12' y2='7.2'/%3E%3Cline x1='15.5' y1='13.5' x2='15.5' y2='8.5'/%3E%3Cline x1='19' y1='12.5' x2='19' y2='9.5'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
@@ -23,7 +24,19 @@
 <body>
   <div class="frame">
     <header class="topbar">
-      <span class="wordmark">FOSS&nbsp;Interviewer</span>
+      <span class="brand">
+        <svg class="logo" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <path d="M7 3.5 L19 3.5 A4.5 4.5 0 0 1 23.5 8 L23.5 14 A4.5 4.5 0 0 1 19 18.5 L12 18.5 L7.5 22.5 L7.5 18.5 L7 18.5 A4.5 4.5 0 0 1 2.5 14 L2.5 8 A4.5 4.5 0 0 1 7 3.5 Z"
+                fill="rgba(232,163,61,0.07)" stroke="var(--amber)" stroke-width="1.4" stroke-linejoin="round"/>
+          <g stroke="var(--ink)" stroke-width="2" stroke-linecap="round">
+            <line x1="8.5"  y1="13.5" x2="8.5"  y2="8.5"/>
+            <line x1="12"   y1="14.8" x2="12"   y2="7.2"/>
+            <line x1="15.5" y1="13.5" x2="15.5" y2="8.5"/>
+            <line x1="19"   y1="12.5" x2="19"   y2="9.5"/>
+          </g>
+        </svg>
+        <span class="wordmark">FOSS&nbsp;Interviewer</span>
+      </span>
       <span class="topbar-meta">voice&nbsp;·&nbsp;technical&nbsp;screen</span>
     </header>
 
@@ -72,6 +85,10 @@
       <button id="view-report" type="button" class="begin" hidden>
         View report <span aria-hidden="true">→</span>
       </button>
+
+      <button id="restart-interview" type="button" class="restart-btn restart-abort">
+        Restart <span aria-hidden="true">↺</span>
+      </button>
     </section>
 
     <!-- ──────────────── CODING ─────────────────── -->
@@ -84,6 +101,7 @@
       <pre id="coding-prompt" class="coding-prompt"></pre>
 
       <div class="coding-toolbar">
+        <button id="restart-coding" type="button" class="restart-btn restart-abort">Restart <span aria-hidden="true">↺</span></button>
         <label class="coding-lang-label" for="coding-lang">Language</label>
         <select id="coding-lang" class="coding-lang">
           <option value="python">Python</option>

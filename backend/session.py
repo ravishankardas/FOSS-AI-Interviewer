@@ -37,6 +37,10 @@ class InterviewSession:
     audio_buf: bytearray = field(default_factory=bytearray)
     speech_samples: list[np.ndarray] = field(default_factory=list)
     speech_started: bool = False
+    # event-loop timestamp by which the bot's queued TTS finishes playing; the
+    # silence-nudge timer in ws_handler starts from this so it never fires while
+    # the bot is still speaking
+    speaking_until: float = 0.0
 
 
     def __post_init__(self):

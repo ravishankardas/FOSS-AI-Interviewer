@@ -10,9 +10,21 @@
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n    int target;\n    cin >> target;\n\n    // TODO: print the two indices that add up to target\n    return 0;\n}\n"
     },
     "tests": [
-      { "name": "example", "stdin": "2 7 11 15\n9\n", "expected": "0 1" },
-      { "name": "first two", "stdin": "3 3 4 5\n6\n", "expected": "0 1" },
-      { "name": "ends", "stdin": "1 5 2 8\n9\n", "expected": "0 3" }
+      {
+        "name": "example",
+        "stdin": "2 7 11 15\n9\n",
+        "expected": "0 1"
+      },
+      {
+        "name": "first two",
+        "stdin": "3 3 4 5\n6\n",
+        "expected": "0 1"
+      },
+      {
+        "name": "ends",
+        "stdin": "1 5 2 8\n9\n",
+        "expected": "0 3"
+      }
     ]
   },
   {
@@ -26,11 +38,31 @@
       "c++": "#include <iostream>\n#include <string>\n#include <stack>\nusing namespace std;\n\nint main() {\n    string s;\n    getline(cin, s);\n\n    // TODO: print \"true\" if the brackets are balanced, else \"false\"\n    return 0;\n}\n"
     },
     "tests": [
-      { "name": "simple pair", "stdin": "()\n", "expected": "true" },
-      { "name": "all types", "stdin": "()[]{}\n", "expected": "true" },
-      { "name": "mismatch", "stdin": "(]\n", "expected": "false" },
-      { "name": "wrong order", "stdin": "([)]\n", "expected": "false" },
-      { "name": "nested", "stdin": "{[]}\n", "expected": "true" }
+      {
+        "name": "simple pair",
+        "stdin": "()\n",
+        "expected": "true"
+      },
+      {
+        "name": "all types",
+        "stdin": "()[]{}\n",
+        "expected": "true"
+      },
+      {
+        "name": "mismatch",
+        "stdin": "(]\n",
+        "expected": "false"
+      },
+      {
+        "name": "wrong order",
+        "stdin": "([)]\n",
+        "expected": "false"
+      },
+      {
+        "name": "nested",
+        "stdin": "{[]}\n",
+        "expected": "true"
+      }
     ]
   },
   {
@@ -44,9 +76,21 @@
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> prices;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) prices.push_back(x);\n\n    // TODO: print the maximum profit (0 if none)\n    return 0;\n}\n"
     },
     "tests": [
-      { "name": "profit", "stdin": "7 1 5 3 6 4\n", "expected": "5" },
-      { "name": "no profit", "stdin": "7 6 4 3 1\n", "expected": "0" },
-      { "name": "two days", "stdin": "1 2\n", "expected": "1" }
+      {
+        "name": "profit",
+        "stdin": "7 1 5 3 6 4\n",
+        "expected": "5"
+      },
+      {
+        "name": "no profit",
+        "stdin": "7 6 4 3 1\n",
+        "expected": "0"
+      },
+      {
+        "name": "two days",
+        "stdin": "1 2\n",
+        "expected": "1"
+      }
     ]
   },
   {
@@ -60,9 +104,21 @@
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\n#include <unordered_set>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print \"true\" if there is a duplicate, else \"false\"\n    return 0;\n}\n"
     },
     "tests": [
-      { "name": "has duplicate", "stdin": "1 2 3 1\n", "expected": "true" },
-      { "name": "all unique", "stdin": "1 2 3 4\n", "expected": "false" },
-      { "name": "all same", "stdin": "1 1 1 1\n", "expected": "true" }
+      {
+        "name": "has duplicate",
+        "stdin": "1 2 3 1\n",
+        "expected": "true"
+      },
+      {
+        "name": "all unique",
+        "stdin": "1 2 3 4\n",
+        "expected": "false"
+      },
+      {
+        "name": "all same",
+        "stdin": "1 1 1 1\n",
+        "expected": "true"
+      }
     ]
   },
   {
@@ -76,10 +132,1826 @@
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the maximum contiguous subarray sum\n    return 0;\n}\n"
     },
     "tests": [
-      { "name": "mixed", "stdin": "-2 1 -3 4 -1 2 1 -5 4\n", "expected": "6" },
-      { "name": "single", "stdin": "1\n", "expected": "1" },
-      { "name": "all negative", "stdin": "-3 -1 -2\n", "expected": "-1" },
-      { "name": "all positive", "stdin": "5 4 -1 7 8\n", "expected": "23" }
+      {
+        "name": "mixed",
+        "stdin": "-2 1 -3 4 -1 2 1 -5 4\n",
+        "expected": "6"
+      },
+      {
+        "name": "single",
+        "stdin": "1\n",
+        "expected": "1"
+      },
+      {
+        "name": "all negative",
+        "stdin": "-3 -1 -2\n",
+        "expected": "-1"
+      },
+      {
+        "name": "all positive",
+        "stdin": "5 4 -1 7 8\n",
+        "expected": "23"
+      }
+    ]
+  },
+  {
+    "id": "roman-to-integer",
+    "title": "Roman to Integer",
+    "difficulty": "easy",
+    "prompt": "Read a line containing a Roman numeral (I, V, X, L, C, D, M) and print its integer value.\n\nInput:\n  MCMXCIV\nOutput:\n  1994",
+    "spoken_intro": "Here's a parsing one. You'll get a Roman numeral as a string, and you print the integer it represents. Run the tests and submit when ready.",
+    "starter": {
+      "python": "s = input().strip()\n\n# TODO: print the integer value of the Roman numeral\n",
+      "c++": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string s;\n    getline(cin, s);\n\n    // TODO: print the integer value of the Roman numeral s\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "MCMXCIV\n",
+        "expected": "1994"
+      },
+      {
+        "name": "simple",
+        "stdin": "III\n",
+        "expected": "3"
+      },
+      {
+        "name": "subtractive",
+        "stdin": "IV\n",
+        "expected": "4"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "MMMCMLIX\n",
+        "expected": "3959"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "MMMCLXXXVIII\n",
+        "expected": "3188"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "MDCCCVI\n",
+        "expected": "1806"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "CDLXXIX\n",
+        "expected": "479"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "XXXI\n",
+        "expected": "31"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "CCCLXXII\n",
+        "expected": "372"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "MMMDCCXXXII\n",
+        "expected": "3732"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "MMMDCCCLXI\n",
+        "expected": "3861"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "MMMDCCCXLVIII\n",
+        "expected": "3848"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "MMMCCCVI\n",
+        "expected": "3306"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "MMCCCLXXXV\n",
+        "expected": "2385"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "CXLIV\n",
+        "expected": "144"
+      }
+    ]
+  },
+  {
+    "id": "length-of-last-word",
+    "title": "Length of Last Word",
+    "difficulty": "easy",
+    "prompt": "Read a line of words separated by spaces (there may be trailing spaces). Print the length of the last word.\n\nInput:\n  Hello World\nOutput:\n  5",
+    "spoken_intro": "A quick string one. Given a line of words, print the length of the last word. Watch out for trailing spaces. Run the tests and submit when ready.",
+    "starter": {
+      "python": "line = input()\n\n# TODO: print the length of the last word\n",
+      "c++": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n\n    // TODO: print the length of the last word\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "Hello World\n",
+        "expected": "5"
+      },
+      {
+        "name": "trailing spaces",
+        "stdin": "   fly me   to   the moon  \n",
+        "expected": "4"
+      },
+      {
+        "name": "single word",
+        "stdin": "luffy\n",
+        "expected": "5"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "eddbc dbeadc cedc c \n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "daaeee aadbd \n",
+        "expected": "5"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "bcb dece cdca   \n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "bddca ad cb cba \n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "a abdda edab ceace dda \n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "c d\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "aade cacee bbd caadae ae  \n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "edada bceca dcdcd  \n",
+        "expected": "5"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "ba babc c ebbbbc eadd  \n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "abbe cd bae ca\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "ac cdccbb bddede adcb cb \n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "c b \n",
+        "expected": "1"
+      }
+    ]
+  },
+  {
+    "id": "longest-common-prefix",
+    "title": "Longest Common Prefix",
+    "difficulty": "easy",
+    "prompt": "Read a line of space-separated lowercase words. Print the longest common prefix shared by all of them, or an empty line if there is none.\n\nInput:\n  flower flow flight\nOutput:\n  fl",
+    "spoken_intro": "Given a few words, find the longest starting string they all share. Print it, or an empty line if there's no common prefix. Submit when ready.",
+    "starter": {
+      "python": "words = input().split()\n\n# TODO: print the longest common prefix (empty line if none)\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\n#include <string>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<string> words;\n    stringstream ss(line);\n    string w;\n    while (ss >> w) words.push_back(w);\n\n    // TODO: print the longest common prefix (empty line if none)\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "flower flow flight\n",
+        "expected": "fl"
+      },
+      {
+        "name": "no prefix",
+        "stdin": "dog racecar car\n",
+        "expected": ""
+      },
+      {
+        "name": "identical",
+        "stdin": "abc abc abc\n",
+        "expected": "abc"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "ccbca ccbcba ccba\n",
+        "expected": "ccb"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "caa caaaaa caa caabca\n",
+        "expected": "caa"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": " bc cba\n",
+        "expected": ""
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "bba ba\n",
+        "expected": "b"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "ccacb cc\n",
+        "expected": "cc"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "cabac cabb\n",
+        "expected": "cab"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "acc a acbb a\n",
+        "expected": "a"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "bb\n",
+        "expected": "bb"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "acbc\n",
+        "expected": "acbc"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "cbab cbabac\n",
+        "expected": "cbab"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "ca c a b\n",
+        "expected": ""
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "acbaa acb acc\n",
+        "expected": "ac"
+      }
+    ]
+  },
+  {
+    "id": "valid-palindrome",
+    "title": "Valid Palindrome",
+    "difficulty": "easy",
+    "prompt": "Read a line. Considering only alphanumeric characters and ignoring case, print \"true\" if it reads the same forwards and backwards, else \"false\".\n\nInput:\n  A man, a plan, a canal: Panama\nOutput:\n  true",
+    "spoken_intro": "A classic. Given a phrase, ignore punctuation and case, and tell me whether it's a palindrome. Print true or false, then submit when ready.",
+    "starter": {
+      "python": "s = input()\n\n# TODO: print \"true\" if s is a palindrome (alphanumeric, case-insensitive)\n",
+      "c++": "#include <iostream>\n#include <string>\n#include <cctype>\nusing namespace std;\n\nint main() {\n    string s;\n    getline(cin, s);\n\n    // TODO: print \"true\" if s is a palindrome (alphanumeric, case-insensitive)\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "A man, a plan, a canal: Panama\n",
+        "expected": "true"
+      },
+      {
+        "name": "not palindrome",
+        "stdin": "race a car\n",
+        "expected": "false"
+      },
+      {
+        "name": "only punctuation",
+        "stdin": " .,\n",
+        "expected": "true"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": " \n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "2  \n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "A.A..22A\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": ", A B.AA\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": ".\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": ".11,.\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "A ,2,1A\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "2,22BAAA\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "1a.1 1a1\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "b 1\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "b,2aB1B.\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "2.BbbB2\n",
+        "expected": "true"
+      }
+    ]
+  },
+  {
+    "id": "is-subsequence",
+    "title": "Is Subsequence",
+    "difficulty": "easy",
+    "prompt": "Read two lines: a string s, then a string t. Print \"true\" if s is a subsequence of t (the characters of s appear in t in order, not necessarily contiguous), else \"false\".\n\nInput:\n  abc\n  ahbgdc\nOutput:\n  true",
+    "spoken_intro": "You'll get two strings, s and t. Tell me whether s is a subsequence of t — same characters, in order, gaps allowed. Print true or false.",
+    "starter": {
+      "python": "s = input()\nt = input()\n\n# TODO: print \"true\" if s is a subsequence of t\n",
+      "c++": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string s, t;\n    getline(cin, s);\n    getline(cin, t);\n\n    // TODO: print \"true\" if s is a subsequence of t\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "abc\nahbgdc\n",
+        "expected": "true"
+      },
+      {
+        "name": "not subsequence",
+        "stdin": "axc\nahbgdc\n",
+        "expected": "false"
+      },
+      {
+        "name": "empty s",
+        "stdin": "\nahbgdc\n",
+        "expected": "true"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "ca\n\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "dd\ncccbdbbba\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "\ndcdbcccbd\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "ac\naac\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "ca\ndcbda\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "ccdadb\nccdadadab\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "a\ncad\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "\nba\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "a\nddacca\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "cbbb\nacabb\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "\ndadddbda\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "bc\nabcbcc\n",
+        "expected": "true"
+      }
+    ]
+  },
+  {
+    "id": "majority-element",
+    "title": "Majority Element",
+    "difficulty": "easy",
+    "prompt": "Read a line of space-separated integers. One value appears more than half the time; print that value.\n\nInput:\n  2 2 1 1 1 2 2\nOutput:\n  2",
+    "spoken_intro": "Given a list where one value appears more than half the time, find and print that value. Run the tests and submit when you're happy.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print the majority element\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the majority element\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "3 2 3\n",
+        "expected": "3"
+      },
+      {
+        "name": "longer",
+        "stdin": "2 2 1 1 1 2 2\n",
+        "expected": "2"
+      },
+      {
+        "name": "single",
+        "stdin": "7\n",
+        "expected": "7"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "2 2\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "0\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "3 3\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "2 2 2\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "4 5 3 5 3 3 3\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "1 1 2 5 1 1 1\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "5\n",
+        "expected": "5"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "4 5 5\n",
+        "expected": "5"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "4 4 4 5 4 4 4 3 0\n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "0 4 0 0 4 0\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "3 3 3 3 3 4\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "0 5 5\n",
+        "expected": "5"
+      }
+    ]
+  },
+  {
+    "id": "jump-game",
+    "title": "Jump Game",
+    "difficulty": "medium",
+    "prompt": "Read a line of space-separated non-negative integers. Each value is the max jump length from that position, starting at index 0. Print \"true\" if you can reach the last index, else \"false\".\n\nInput:\n  2 3 1 1 4\nOutput:\n  true",
+    "spoken_intro": "Here's a greedy one. Each number is how far you can jump from that spot, starting at the front. Can you reach the end? Print true or false.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print \"true\" if the last index is reachable\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print \"true\" if the last index is reachable\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "reachable",
+        "stdin": "2 3 1 1 4\n",
+        "expected": "true"
+      },
+      {
+        "name": "stuck at zero",
+        "stdin": "3 2 1 0 4\n",
+        "expected": "false"
+      },
+      {
+        "name": "single",
+        "stdin": "0\n",
+        "expected": "true"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "2 4 4 4 0 3 3 2\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "0 2 4 3 0 4 2 3\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "0 1\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "4 1 2 1 2\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "4 1 0 0 0 4 2 0 1 4\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "2 2\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "4 3 3 0 2 2 3 3 1 2\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "4\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "2 3 4\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "0 3 0 4 0 4 0 2 3 0\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "3 4 0\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "1 0 3 2 2 2 3 4 4\n",
+        "expected": "false"
+      }
+    ]
+  },
+  {
+    "id": "product-except-self",
+    "title": "Product of Array Except Self",
+    "difficulty": "medium",
+    "prompt": "Read a line of space-separated integers. Print a line where each position holds the product of all the other numbers (not the one at that position).\n\nInput:\n  1 2 3 4\nOutput:\n  24 12 8 6",
+    "spoken_intro": "For each position, print the product of every other number in the list. Try to do it without division. Run the tests and submit when ready.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print the product-except-self array, space-separated\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the product-except-self array, space-separated\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "1 2 3 4\n",
+        "expected": "24 12 8 6"
+      },
+      {
+        "name": "with zero",
+        "stdin": "-1 1 0 -3 3\n",
+        "expected": "0 0 9 0 0"
+      },
+      {
+        "name": "two elements",
+        "stdin": "2 3\n",
+        "expected": "3 2"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "1 0 3 -2 -1 -1\n",
+        "expected": "0 -6 0 0 0 0"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "2 0 1\n",
+        "expected": "0 2 0"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "-2 1 2 -1 0 -3 0\n",
+        "expected": "0 0 0 0 0 0 0"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "-2 0 0 0 -1\n",
+        "expected": "0 0 0 0 0"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "-3 2 0\n",
+        "expected": "0 0 -6"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "2 -2\n",
+        "expected": "-2 2"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "-3 1\n",
+        "expected": "1 -3"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "0 1 1 -1 2\n",
+        "expected": "-2 0 0 0 0"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "2 -1 -3 -3 1 3 2\n",
+        "expected": "-54 108 36 36 -108 -36 -54"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "3 0 0 2 -2 -1\n",
+        "expected": "0 0 0 0 0 0"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "0 1 0 -2 0 -3 2\n",
+        "expected": "0 0 0 0 0 0 0"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "-3 -1 1 -3 1\n",
+        "expected": "3 9 -9 3 -9"
+      }
+    ]
+  },
+  {
+    "id": "best-time-stock-ii",
+    "title": "Best Time to Buy and Sell Stock II",
+    "difficulty": "medium",
+    "prompt": "Read a line of space-separated integers (daily stock prices). You may buy and sell many times (but hold at most one share at a time). Print the maximum total profit.\n\nInput:\n  7 1 5 3 6 4\nOutput:\n  7",
+    "spoken_intro": "Like the earlier stock problem, but now you can trade as many times as you like. Find the maximum total profit and print it. Submit when ready.",
+    "starter": {
+      "python": "prices = list(map(int, input().split()))\n\n# TODO: print the maximum total profit\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> prices;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) prices.push_back(x);\n\n    // TODO: print the maximum total profit\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "7 1 5 3 6 4\n",
+        "expected": "7"
+      },
+      {
+        "name": "monotonic up",
+        "stdin": "1 2 3 4 5\n",
+        "expected": "4"
+      },
+      {
+        "name": "no profit",
+        "stdin": "7 6 4 3 1\n",
+        "expected": "0"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "9 6\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "2 10 7 1 11 10 8\n",
+        "expected": "18"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "3 9 6\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "10\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "8 8 3\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "6 1 9 6 6 4 12\n",
+        "expected": "16"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "7 6 11\n",
+        "expected": "5"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "9 7 12 9 6\n",
+        "expected": "5"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "6\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "4 6 3 11 7 5 2 7\n",
+        "expected": "15"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "7 7 9 6 1\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "7 6 2 4 12 8\n",
+        "expected": "10"
+      }
+    ]
+  },
+  {
+    "id": "search-insert-position",
+    "title": "Search Insert Position",
+    "difficulty": "easy",
+    "prompt": "Read a line of sorted, distinct space-separated integers, then a line with a target. Print the index (0-based) of the target, or the index where it would be inserted to keep the list sorted.\n\nInput:\n  1 3 5 6\n  5\nOutput:\n  2",
+    "spoken_intro": "You'll get a sorted list and a target. Print where the target is, or where it would go to keep things sorted. Binary search is the intended approach.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\ntarget = int(input())\n\n# TODO: print the index of target, or its insert position\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n    int target;\n    cin >> target;\n\n    // TODO: print the index of target, or its insert position\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "found",
+        "stdin": "1 3 5 6\n5\n",
+        "expected": "2"
+      },
+      {
+        "name": "insert middle",
+        "stdin": "1 3 5 6\n2\n",
+        "expected": "1"
+      },
+      {
+        "name": "insert end",
+        "stdin": "1 3 5 6\n7\n",
+        "expected": "4"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "-10 3 4 6 8 19\n7\n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "6 9 13\n-5\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "-10\n4\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "-7 -3 5 7 14 17\n4\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "-1 4\n17\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "-8 -7 1 3 16\n-8\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "-6 -4 2 5 12\n-7\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "-10 8 19\n8\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "-1 14\n22\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "-7 11\n16\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "18\n-2\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "-4 -3 -1 13 19\n17\n",
+        "expected": "4"
+      }
+    ]
+  },
+  {
+    "id": "add-binary",
+    "title": "Add Binary",
+    "difficulty": "easy",
+    "prompt": "Read two lines, each a binary string. Print their sum as a binary string.\n\nInput:\n  11\n  1\nOutput:\n  100",
+    "spoken_intro": "You'll get two binary numbers as strings. Add them and print the result, also in binary. Run the tests and submit when ready.",
+    "starter": {
+      "python": "a = input().strip()\nb = input().strip()\n\n# TODO: print the binary sum of a and b\n",
+      "c++": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string a, b;\n    getline(cin, a);\n    getline(cin, b);\n\n    // TODO: print the binary sum of a and b\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "11\n1\n",
+        "expected": "100"
+      },
+      {
+        "name": "with carry",
+        "stdin": "1010\n1011\n",
+        "expected": "10101"
+      },
+      {
+        "name": "zeros",
+        "stdin": "0\n0\n",
+        "expected": "0"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "10111\n111111010\n",
+        "expected": "1000010001"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "101000101\n1110011110\n",
+        "expected": "10011100011"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "0\n110\n",
+        "expected": "110"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "1111\n1\n",
+        "expected": "10000"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "111010\n1000100011\n",
+        "expected": "1001011101"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "111\n10001100\n",
+        "expected": "10010011"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "10001\n1110\n",
+        "expected": "11111"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "1011001\n1001111\n",
+        "expected": "10101000"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "101\n100\n",
+        "expected": "1001"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "111\n11010\n",
+        "expected": "100001"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "1\n10010\n",
+        "expected": "10011"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "111111\n1101111\n",
+        "expected": "10101110"
+      }
+    ]
+  },
+  {
+    "id": "plus-one",
+    "title": "Plus One",
+    "difficulty": "easy",
+    "prompt": "Read a line of space-separated digits representing a non-negative integer (most significant first, no leading zeros). Add one and print the resulting digits, space-separated.\n\nInput:\n  1 2 3\nOutput:\n  1 2 4",
+    "spoken_intro": "A list of digits represents a number. Add one to it and print the digits back out, minding any carry. Run the tests and submit when ready.",
+    "starter": {
+      "python": "digits = list(map(int, input().split()))\n\n# TODO: print the digits of (number + 1), space-separated\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> digits;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) digits.push_back(x);\n\n    // TODO: print the digits of (number + 1), space-separated\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "1 2 3\n",
+        "expected": "1 2 4"
+      },
+      {
+        "name": "carry",
+        "stdin": "9\n",
+        "expected": "1 0"
+      },
+      {
+        "name": "multi carry",
+        "stdin": "9 9\n",
+        "expected": "1 0 0"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "9 2 0 9 2\n",
+        "expected": "9 2 0 9 3"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "6 7 2\n",
+        "expected": "6 7 3"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "6\n",
+        "expected": "7"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "4 8\n",
+        "expected": "4 9"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "5 8 3 6 8 5\n",
+        "expected": "5 8 3 6 8 6"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "8 9\n",
+        "expected": "9 0"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "9 6 8 4 7 7\n",
+        "expected": "9 6 8 4 7 8"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "0\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "2 1\n",
+        "expected": "2 2"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "8 5\n",
+        "expected": "8 6"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "9 2 2 6 4\n",
+        "expected": "9 2 2 6 5"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "9 8 6 4 8 6\n",
+        "expected": "9 8 6 4 8 7"
+      }
+    ]
+  },
+  {
+    "id": "valid-anagram",
+    "title": "Valid Anagram",
+    "difficulty": "easy",
+    "prompt": "Read two lines: strings s and t. Print \"true\" if t is an anagram of s (same letters with the same counts), else \"false\".\n\nInput:\n  anagram\n  nagaram\nOutput:\n  true",
+    "spoken_intro": "Given two strings, tell me whether one is an anagram of the other — same letters, same counts. Print true or false, then submit when ready.",
+    "starter": {
+      "python": "s = input()\nt = input()\n\n# TODO: print \"true\" if t is an anagram of s\n",
+      "c++": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string s, t;\n    getline(cin, s);\n    getline(cin, t);\n\n    // TODO: print \"true\" if t is an anagram of s\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "anagram",
+        "stdin": "anagram\nnagaram\n",
+        "expected": "true"
+      },
+      {
+        "name": "not anagram",
+        "stdin": "rat\ncar\n",
+        "expected": "false"
+      },
+      {
+        "name": "different length",
+        "stdin": "a\nab\n",
+        "expected": "false"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "ac\nac\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "a\nababc\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "baa\nbbbc\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "cb\nb\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "cb\nc\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "caaacb\naacabc\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "a\nbccba\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "ccbbc\nbbba\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "cac\nacc\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "cbabac\ncbacab\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "cc\ncc\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "cbbaba\naccccc\n",
+        "expected": "false"
+      }
+    ]
+  },
+  {
+    "id": "ransom-note",
+    "title": "Ransom Note",
+    "difficulty": "easy",
+    "prompt": "Read two lines: a ransom note, then a magazine string. Print \"true\" if the note can be built using the magazine's letters (each magazine letter used at most once), else \"false\".\n\nInput:\n  aa\n  aab\nOutput:\n  true",
+    "spoken_intro": "You'll get a note and a magazine. Can you build the note from the magazine's letters, using each at most once? Print true or false.",
+    "starter": {
+      "python": "note = input()\nmagazine = input()\n\n# TODO: print \"true\" if note can be built from magazine\n",
+      "c++": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string note, magazine;\n    getline(cin, note);\n    getline(cin, magazine);\n\n    // TODO: print \"true\" if note can be built from magazine\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "buildable",
+        "stdin": "aa\naab\n",
+        "expected": "true"
+      },
+      {
+        "name": "not enough",
+        "stdin": "aa\nab\n",
+        "expected": "false"
+      },
+      {
+        "name": "missing letter",
+        "stdin": "a\nb\n",
+        "expected": "false"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "a\ncbccba\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "bc\ncbabaca\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "accc\ncbc\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "caa\ncbcaa\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "ccac\nbbbcbcca\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "abb\naacaa\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "bc\ncaca\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "aaccc\nccc\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "cb\nbaab\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "cbb\ncacaca\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "acab\nacabb\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "bacc\nbca\n",
+        "expected": "false"
+      }
+    ]
+  },
+  {
+    "id": "word-pattern",
+    "title": "Word Pattern",
+    "difficulty": "easy",
+    "prompt": "Read a pattern line (lowercase letters), then a line of space-separated words. Print \"true\" if the words follow the pattern with a one-to-one mapping between letters and words, else \"false\".\n\nInput:\n  abba\n  dog cat cat dog\nOutput:\n  true",
+    "spoken_intro": "Given a pattern of letters and a list of words, decide whether the words follow the pattern as a strict one-to-one mapping. Print true or false.",
+    "starter": {
+      "python": "pattern = input().strip()\nwords = input().split()\n\n# TODO: print \"true\" if words follow pattern (bijection)\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\n#include <string>\nusing namespace std;\n\nint main() {\n    string pattern, line;\n    getline(cin, pattern);\n    getline(cin, line);\n    vector<string> words;\n    stringstream ss(line);\n    string w;\n    while (ss >> w) words.push_back(w);\n\n    // TODO: print \"true\" if words follow pattern (bijection)\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "match",
+        "stdin": "abba\ndog cat cat dog\n",
+        "expected": "true"
+      },
+      {
+        "name": "broken",
+        "stdin": "abba\ndog cat cat fish\n",
+        "expected": "false"
+      },
+      {
+        "name": "not bijection",
+        "stdin": "aaaa\ndog cat cat dog\n",
+        "expected": "false"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "bc\nfish fish\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "b\nfish\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "cac\nbird fish bird\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "bbc\nfish fish bird\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "bb\nbird fish\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "cac\nbird dog bird\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "bc\nfish dog\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "b\ncat\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "aacc\nfish fish dog dog\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "ac\ncat fish\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "a\nfish\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "a\nbird\n",
+        "expected": "true"
+      }
+    ]
+  },
+  {
+    "id": "summary-ranges",
+    "title": "Summary Ranges",
+    "difficulty": "easy",
+    "prompt": "Read a line of sorted, distinct space-separated integers (possibly empty). Print the covering ranges, space-separated: a single number as \"x\", a run as \"a->b\".\n\nInput:\n  0 1 2 4 5 7\nOutput:\n  0->2 4->5 7",
+    "spoken_intro": "Given a sorted list of distinct integers, collapse the consecutive runs into ranges and print them. Run the tests and submit when ready.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print the summary ranges, space-separated\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the summary ranges, space-separated\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "0 1 2 4 5 7\n",
+        "expected": "0->2 4->5 7"
+      },
+      {
+        "name": "singles and runs",
+        "stdin": "0 2 3 4 6 8 9\n",
+        "expected": "0 2->4 6 8->9"
+      },
+      {
+        "name": "empty",
+        "stdin": "\n",
+        "expected": ""
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "-1 0 2 7 8 9 13 14\n",
+        "expected": "-1->0 2 7->9 13->14"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "0 4\n",
+        "expected": "0 4"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "0 5 12 14\n",
+        "expected": "0 5 12 14"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "-1 1 3 5 7 11 13\n",
+        "expected": "-1 1 3 5 7 11 13"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "10\n",
+        "expected": "10"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "1 5 7 9 10\n",
+        "expected": "1 5 7 9->10"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "-5 -4 -2 1 6 13 14\n",
+        "expected": "-5->-4 -2 1 6 13->14"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "0 1 4 6\n",
+        "expected": "0->1 4 6"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "3 5 11\n",
+        "expected": "3 5 11"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "-4 -3 4 5 8 9\n",
+        "expected": "-4->-3 4->5 8->9"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "3 7 12\n",
+        "expected": "3 7 12"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "-4 -1 5 8 12 13 14\n",
+        "expected": "-4 -1 5 8 12->14"
+      }
+    ]
+  },
+  {
+    "id": "climbing-stairs",
+    "title": "Climbing Stairs",
+    "difficulty": "easy",
+    "prompt": "Read a single integer n. You climb 1 or 2 steps at a time. Print the number of distinct ways to reach the top of n steps.\n\nInput:\n  3\nOutput:\n  3",
+    "spoken_intro": "A small dynamic-programming one. You climb one or two steps at a time — how many distinct ways are there to reach the top of n steps? Print the count.",
+    "starter": {
+      "python": "n = int(input())\n\n# TODO: print the number of distinct ways to climb n steps\n",
+      "c++": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n\n    // TODO: print the number of distinct ways to climb n steps\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "two steps",
+        "stdin": "2\n",
+        "expected": "2"
+      },
+      {
+        "name": "three steps",
+        "stdin": "3\n",
+        "expected": "3"
+      },
+      {
+        "name": "one step",
+        "stdin": "1\n",
+        "expected": "1"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "5\n",
+        "expected": "8"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "13\n",
+        "expected": "377"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "21\n",
+        "expected": "17711"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "6\n",
+        "expected": "13"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "9\n",
+        "expected": "55"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "11\n",
+        "expected": "144"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "10\n",
+        "expected": "89"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "26\n",
+        "expected": "196418"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "29\n",
+        "expected": "832040"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "25\n",
+        "expected": "121393"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "16\n",
+        "expected": "1597"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "27\n",
+        "expected": "317811"
+      }
+    ]
+  },
+  {
+    "id": "single-number",
+    "title": "Single Number",
+    "difficulty": "easy",
+    "prompt": "Read a line of space-separated integers in which every value appears exactly twice except one, which appears once. Print that single value.\n\nInput:\n  4 1 2 1 2\nOutput:\n  4",
+    "spoken_intro": "Every number here appears twice except one. Find the loner and print it — ideally in linear time and constant space. Submit when ready.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print the value that appears only once\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the value that appears only once\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "4 1 2 1 2\n",
+        "expected": "4"
+      },
+      {
+        "name": "single",
+        "stdin": "1\n",
+        "expected": "1"
+      },
+      {
+        "name": "pair plus one",
+        "stdin": "2 2 7\n",
+        "expected": "7"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "26 10 10 11 0 0 7 7 11\n",
+        "expected": "26"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "21 21 6\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "16 27 10 27 16\n",
+        "expected": "10"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "23 14 14\n",
+        "expected": "23"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "18\n",
+        "expected": "18"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "16 11 4 4 11\n",
+        "expected": "16"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "16\n",
+        "expected": "16"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "6 10 3 18 19 3 19 10 18\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "11 21 11 20 21 20 22 22 8\n",
+        "expected": "8"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "4\n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "11 13 19 5 5 11 13\n",
+        "expected": "19"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "5 22 16 5 11 16 11\n",
+        "expected": "22"
+      }
+    ]
+  },
+  {
+    "id": "two-sum-ii-sorted",
+    "title": "Two Sum II - Input Array Is Sorted",
+    "difficulty": "medium",
+    "prompt": "Read a line of sorted space-separated integers, then a line with a target. Exactly one pair adds up to the target; print their 1-based indices in ascending order, separated by a space.\n\nInput:\n  2 7 11 15\n  9\nOutput:\n  1 2",
+    "spoken_intro": "Like the first two-sum, but the array is sorted and indices are 1-based. Find the unique pair that hits the target. The two-pointer trick fits well.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\ntarget = int(input())\n\n# TODO: print the 1-based indices of the pair summing to target\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n    int target;\n    cin >> target;\n\n    // TODO: print the 1-based indices of the pair summing to target\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "2 7 11 15\n9\n",
+        "expected": "1 2"
+      },
+      {
+        "name": "ends",
+        "stdin": "2 3 4\n6\n",
+        "expected": "1 3"
+      },
+      {
+        "name": "negatives",
+        "stdin": "-1 0\n-1\n",
+        "expected": "1 2"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "-5 -1 5 10 17\n27\n",
+        "expected": "4 5"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "-3 0 1 6 9 17 19\n18\n",
+        "expected": "3 6"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "-3 -1 3 10 11 13 16 18\n26\n",
+        "expected": "4 7"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "-6 5 8 15\n20\n",
+        "expected": "2 4"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "5 10 13 17\n30\n",
+        "expected": "3 4"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "-10 -7 2 8 18\n11\n",
+        "expected": "2 5"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "-1 7 10\n17\n",
+        "expected": "2 3"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "-2 0 11 15 16 17\n16\n",
+        "expected": "2 5"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "-1 0 7 10 14 15 16\n26\n",
+        "expected": "4 7"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "-10 -5 -3 0 4 7 12 17\n9\n",
+        "expected": "3 7"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "-7 3 15 16\n9\n",
+        "expected": "1 4"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "-10 -7 1 4 7\n-9\n",
+        "expected": "1 3"
+      }
+    ]
+  },
+  {
+    "id": "happy-number",
+    "title": "Happy Number",
+    "difficulty": "easy",
+    "prompt": "Read a single integer n. Repeatedly replace it with the sum of the squares of its digits. Print \"true\" if this reaches 1, else \"false\" (it loops forever).\n\nInput:\n  19\nOutput:\n  true",
+    "spoken_intro": "Take a number, replace it with the sum of the squares of its digits, and repeat. If you reach one, it's happy. Print true or false. Submit when ready.",
+    "starter": {
+      "python": "n = int(input())\n\n# TODO: print \"true\" if n is a happy number, else \"false\"\n",
+      "c++": "#include <iostream>\n#include <unordered_set>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n\n    // TODO: print \"true\" if n is a happy number, else \"false\"\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "happy",
+        "stdin": "19\n",
+        "expected": "true"
+      },
+      {
+        "name": "unhappy",
+        "stdin": "2\n",
+        "expected": "false"
+      },
+      {
+        "name": "one",
+        "stdin": "1\n",
+        "expected": "true"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "188\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "54\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "173\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "46\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "111\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "41\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "192\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "123\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "91\n",
+        "expected": "true"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "39\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "187\n",
+        "expected": "false"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "15\n",
+        "expected": "false"
+      }
     ]
   }
 ]

@@ -28,6 +28,7 @@ class CodingQuestion:
     spoken_intro: str                    # read aloud by TTS (shorter, conversational)
     starter: dict = field(default_factory=dict)  # {python, c++} input-reading scaffold
     tests: list = field(default_factory=list)  # [{name, stdin, expected}] visible cases
+    hidden_tests: list = field(default_factory=list)  # never shown; scoring-only, anti-gaming
 
 
 # curated coding-question bank lives next to this module
@@ -50,6 +51,21 @@ def pick_coding_questions(n: int = 1, path: str = _CODING_BANK) -> List[CodingQu
 class _QuestionSchema(BaseModel):
     text: str
     topic: str
+
+
+@dataclass
+class Turn:
+    """One asked-and-answered exchange, fed back in as adaptive history."""
+    question: Question
+    answer: str
+    mastery: int | None = None  # the judge's read of THIS answer, filled in next turn
+
+
+class _AdaptiveSchema(BaseModel):
+    last_mastery: int          # 0-10 read of the most recent answer
+    next_text: str             # the next question, spoken verbatim
+    next_topic: str            # skills|experience|projects|education
+    next_difficulty: str       # easy|medium|hard
 
 SYSTEM_PROMPT = """
   You are an expert technical interviewer conducting a real job interview.
@@ -113,6 +129,69 @@ def generate_questions(resume: ResumeData, cfg: InterviewConfig, llm: Any) ->Lis
     questions = [Question(text=q['text'], topic=q['topic']) for q in data]
     random.shuffle(questions)
     return questions
+
+
+ADAPTIVE_SYSTEM_PROMPT = """
+  You are an expert technical interviewer running a live, adaptive interview.
+  You are given the candidate's resume and the exchange so far (the questions
+  you've already asked and how they answered). Do two things, in one JSON object:
+
+  1. Rate the MOST RECENT answer from 0 to 10 ("last_mastery"):
+     - 0-3: struggled, vague, wrong, or didn't really answer
+     - 4-6: partial — correct shape but shallow or missing depth
+     - 7-10: strong, specific, confident, technically sound
+
+  2. Choose the NEXT question, adapting to that rating:
+     - If they struggled (low mastery): make it EASIER, or pivot to a different
+       topic where they may be stronger. Don't pile on.
+     - If they did okay (mid): stay on a similar level, probe a nearby area.
+     - If they nailed it (high mastery): go DEEPER or HARDER on what they know.
+
+  Rules for the next question:
+  - Specific to THIS resume, never generic
+  - Do not repeat or closely echo any question already asked
+  - Conversational, as if spoken out loud; a single question
+  - "next_difficulty" must honestly reflect how hard the question is
+
+  Output ONLY a JSON object with keys:
+  last_mastery (int 0-10), next_text (string), next_topic
+  (skills|experience|projects|education), next_difficulty (easy|medium|hard).
+  No markdown, no code fences, no extra text.
+  """
+
+
+def _history_to_text(history: List["Turn"]) -> str:
+    """Render the exchange so far for the adaptive prompt."""
+    if not history:
+        return "(no questions asked yet)"
+    lines = []
+    for i, t in enumerate(history, 1):
+        lines.append(f"Q{i} [{t.question.topic}]: {t.question.text}")
+        lines.append(f"A{i}: {t.answer or '(no answer)'}")
+    return "\n".join(lines)
+
+
+def generate_adaptive_question(
+    resume: ResumeData, history: List["Turn"], llm: Any
+) -> tuple[Question, int]:
+    """Pick the next question on the fly from the resume + exchange so far.
+
+    A single structured call does double duty: it rates the most recent answer
+    (the cheap steering signal) and produces the next question targeted to that
+    rating. Returns (next_question, last_mastery); last_mastery is 0 when there's
+    no prior answer to rate (the first adaptive turn).
+    """
+    prompt = (
+        f"Resume:\n{_resume_to_text(resume)}\n\n"
+        f"Exchange so far:\n{_history_to_text(history)}"
+    )
+    response = llm.complete(
+        prompt=prompt, system=ADAPTIVE_SYSTEM_PROMPT, response_schema=_AdaptiveSchema
+    )
+    data = json.loads(response)
+    question = Question(text=data["next_text"], topic=data["next_topic"])
+    mastery = int(data["last_mastery"]) if history else 0
+    return question, mastery
 
 
 def generate_followup(question: Question, answer: str, llm: Any) -> Question:
