@@ -1953,5 +1953,815 @@
         "expected": "false"
       }
     ]
+  },
+  {
+    "id": "maximum-subarray",
+    "title": "Maximum Subarray",
+    "difficulty": "medium",
+    "prompt": "Read a line of space-separated integers. Print the largest sum obtainable from a contiguous subarray (at least one element).\n\nInput:\n  -2 1 -3 4 -1 2 1 -5 4\nOutput:\n  6",
+    "spoken_intro": "A classic — Kadane's. Given a list of integers, find the contiguous stretch with the largest sum and print that sum. Run the tests and submit when ready.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print the maximum contiguous subarray sum\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the maximum contiguous subarray sum\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "-2 1 -3 4 -1 2 1 -5 4\n",
+        "expected": "6"
+      },
+      {
+        "name": "all negative",
+        "stdin": "-3 -1 -2\n",
+        "expected": "-1"
+      },
+      {
+        "name": "single",
+        "stdin": "1\n",
+        "expected": "1"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "-2 -1 3 1 2 -3 -5\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "4 1 -3 -3 -1 5 3 -1\n",
+        "expected": "8"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "2 -1 4 3 3 -4 -3 -1\n",
+        "expected": "11"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "-1 -2 -5 -5 5 -5\n",
+        "expected": "5"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "0 1 -5\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "0 2 -4 4 3 3 0 -4 -1 -4\n",
+        "expected": "10"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "3 -4\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "-1 -5\n",
+        "expected": "-1"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "4 5 1 -4 -5 0 -2 3 -3\n",
+        "expected": "10"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "0 1\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "-2\n",
+        "expected": "-2"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "4 -3 4 -3 -3 1 -1 -2 1\n",
+        "expected": "5"
+      }
+    ]
+  },
+  {
+    "id": "longest-substring-no-repeat",
+    "title": "Longest Substring Without Repeating Characters",
+    "difficulty": "medium",
+    "prompt": "Read a line (lowercase letters, possibly empty). Print the length of the longest substring that contains no repeated character.\n\nInput:\n  abcabcbb\nOutput:\n  3",
+    "spoken_intro": "A sliding-window one. Given a string, find the longest run with no repeated character and print its length. Run the tests and submit when ready.",
+    "starter": {
+      "python": "s = input()\n\n# TODO: print the length of the longest substring without repeats\n",
+      "c++": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string s;\n    getline(cin, s);\n\n    // TODO: print the length of the longest substring without repeats\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "abcabcbb\n",
+        "expected": "3"
+      },
+      {
+        "name": "all same",
+        "stdin": "bbbbb\n",
+        "expected": "1"
+      },
+      {
+        "name": "mixed",
+        "stdin": "pwwkew\n",
+        "expected": "3"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "cbdadd\n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "ad\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "ccad\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "bcacabc\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "b\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "d\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "cbba\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "ccbddab\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "acdbdcddcdad\n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "dcdccbddddda\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "badbacddbcaa\n",
+        "expected": "4"
+      }
+    ]
+  },
+  {
+    "id": "container-most-water",
+    "title": "Container With Most Water",
+    "difficulty": "medium",
+    "prompt": "Read a line of space-separated non-negative integers (heights of vertical lines). Choosing two lines, the water they hold is the shorter height times their distance apart. Print the maximum.\n\nInput:\n  1 8 6 2 5 4 8 3 7\nOutput:\n  49",
+    "spoken_intro": "Two-pointer time. Each number is the height of a vertical line; pick two to hold the most water — shorter side times the gap. Print the maximum area.",
+    "starter": {
+      "python": "height = list(map(int, input().split()))\n\n# TODO: print the maximum water the container can hold\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> height;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) height.push_back(x);\n\n    // TODO: print the maximum water the container can hold\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "1 8 6 2 5 4 8 3 7\n",
+        "expected": "49"
+      },
+      {
+        "name": "two lines",
+        "stdin": "1 1\n",
+        "expected": "1"
+      },
+      {
+        "name": "tall ends",
+        "stdin": "4 3 2 1 4\n",
+        "expected": "16"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "1 1 8 7 6 4 5 9 1 4\n",
+        "expected": "40"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "4 1 1\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "1 6 5 4 3 6 0\n",
+        "expected": "24"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "0 7 7 1 2\n",
+        "expected": "7"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "9 2 8 3\n",
+        "expected": "16"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "2 2 4 9\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "1 4 0 9 4 6 6 6 0 2\n",
+        "expected": "24"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "9 7 8 7 8\n",
+        "expected": "32"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "8 9 8 7 9 9 9 0\n",
+        "expected": "48"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "3 6\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "6 7 3 0 4 6 1 5 3 0\n",
+        "expected": "35"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "1 9 6 6 5 3\n",
+        "expected": "15"
+      }
+    ]
+  },
+  {
+    "id": "coin-change",
+    "title": "Coin Change",
+    "difficulty": "medium",
+    "prompt": "Read a line of space-separated coin denominations, then a line with a target amount. Print the fewest coins that sum to the amount, or -1 if it cannot be made.\n\nInput:\n  1 2 5\n  11\nOutput:\n  3",
+    "spoken_intro": "A DP one. Given coin denominations and a target amount, print the fewest coins that make the amount, or minus one if it's impossible. Submit when ready.",
+    "starter": {
+      "python": "coins = list(map(int, input().split()))\namount = int(input())\n\n# TODO: print the fewest coins to make amount, or -1\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> coins;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) coins.push_back(x);\n    int amount;\n    cin >> amount;\n\n    // TODO: print the fewest coins to make amount, or -1\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "1 2 5\n11\n",
+        "expected": "3"
+      },
+      {
+        "name": "impossible",
+        "stdin": "2\n3\n",
+        "expected": "-1"
+      },
+      {
+        "name": "zero amount",
+        "stdin": "1 2 5\n0\n",
+        "expected": "0"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "2 3 5\n7\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "3 7\n21\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "1 5\n21\n",
+        "expected": "5"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "2 5\n6\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "2 7 10\n18\n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "1 3 10\n11\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "1 5 7\n7\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "1 3 7\n2\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "1 3\n6\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "1\n15\n",
+        "expected": "15"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "2 10\n12\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "2\n17\n",
+        "expected": "-1"
+      }
+    ]
+  },
+  {
+    "id": "house-robber",
+    "title": "House Robber",
+    "difficulty": "medium",
+    "prompt": "Read a line of space-separated non-negative integers (money in each house). You cannot rob two adjacent houses. Print the maximum you can rob.\n\nInput:\n  2 7 9 3 1\nOutput:\n  12",
+    "spoken_intro": "Another DP. Each number is the cash in a house, but you can't hit two houses in a row. Print the maximum you can take. Run the tests and submit when ready.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print the maximum non-adjacent sum\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the maximum non-adjacent sum\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "2 7 9 3 1\n",
+        "expected": "12"
+      },
+      {
+        "name": "small",
+        "stdin": "1 2 3 1\n",
+        "expected": "4"
+      },
+      {
+        "name": "single",
+        "stdin": "5\n",
+        "expected": "5"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "5 7 5\n",
+        "expected": "10"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "9 8 9\n",
+        "expected": "18"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "5 5 6 8 1 7 3 0 7 9\n",
+        "expected": "29"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "0 5 9 6 0\n",
+        "expected": "11"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "9 3\n",
+        "expected": "9"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "5 4 4 8\n",
+        "expected": "13"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "1 8\n",
+        "expected": "8"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "9 1 7 5 8 3\n",
+        "expected": "24"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "1 3 10 2 4 1\n",
+        "expected": "15"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "8 0\n",
+        "expected": "8"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "2 4 7 0 3 10\n",
+        "expected": "19"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "7 5 3 4 7 7 6\n",
+        "expected": "23"
+      }
+    ]
+  },
+  {
+    "id": "unique-paths",
+    "title": "Unique Paths",
+    "difficulty": "medium",
+    "prompt": "Read two integers m and n on one line: the number of rows and columns of a grid. Starting top-left and moving only right or down, print how many distinct paths reach the bottom-right cell.\n\nInput:\n  3 7\nOutput:\n  28",
+    "spoken_intro": "On an m-by-n grid you move only right or down from the top-left. Print how many distinct paths reach the bottom-right corner. Submit when ready.",
+    "starter": {
+      "python": "m, n = map(int, input().split())\n\n# TODO: print the number of distinct paths\n",
+      "c++": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int m, n;\n    cin >> m >> n;\n\n    // TODO: print the number of distinct paths\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "3 7\n",
+        "expected": "28"
+      },
+      {
+        "name": "square",
+        "stdin": "3 3\n",
+        "expected": "6"
+      },
+      {
+        "name": "single row",
+        "stdin": "1 5\n",
+        "expected": "1"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "7 3\n",
+        "expected": "28"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "8 2\n",
+        "expected": "8"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "8 4\n",
+        "expected": "120"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "4 7\n",
+        "expected": "84"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "7 5\n",
+        "expected": "210"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "1 4\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "6 8\n",
+        "expected": "792"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "8 5\n",
+        "expected": "330"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "4 8\n",
+        "expected": "120"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "2 1\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "1 8\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "6 4\n",
+        "expected": "56"
+      }
+    ]
+  },
+  {
+    "id": "decode-ways",
+    "title": "Decode Ways",
+    "difficulty": "medium",
+    "prompt": "Read a line of digits. Using the mapping A=1, B=2, ..., Z=26, print the number of ways to decode the string into letters. A leading zero in any group is invalid.\n\nInput:\n  226\nOutput:\n  3",
+    "spoken_intro": "Digits map to letters — one is A, up to twenty-six is Z. Print how many ways the digit string can be decoded, watching out for zeros. Submit when ready.",
+    "starter": {
+      "python": "s = input().strip()\n\n# TODO: print the number of ways to decode s\n",
+      "c++": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string s;\n    getline(cin, s);\n\n    // TODO: print the number of ways to decode s\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "226\n",
+        "expected": "3"
+      },
+      {
+        "name": "leading zero",
+        "stdin": "06\n",
+        "expected": "0"
+      },
+      {
+        "name": "simple",
+        "stdin": "12\n",
+        "expected": "2"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "2\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "676\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "03\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "593\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "704246\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "9403\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "8\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "47\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "1\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "222125\n",
+        "expected": "13"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "534374\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "89158\n",
+        "expected": "2"
+      }
+    ]
+  },
+  {
+    "id": "maximum-product-subarray",
+    "title": "Maximum Product Subarray",
+    "difficulty": "medium",
+    "prompt": "Read a line of space-separated integers. Print the largest product obtainable from a contiguous subarray (at least one element).\n\nInput:\n  2 3 -2 4\nOutput:\n  6",
+    "spoken_intro": "Like maximum subarray, but with products — and negatives can flip the sign. Print the largest product of a contiguous stretch. Submit when ready.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\n\n# TODO: print the maximum contiguous product\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the maximum contiguous product\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "example",
+        "stdin": "2 3 -2 4\n",
+        "expected": "6"
+      },
+      {
+        "name": "with zero",
+        "stdin": "-2 0 -1\n",
+        "expected": "0"
+      },
+      {
+        "name": "negatives",
+        "stdin": "-2 3 -4\n",
+        "expected": "24"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "-1 -3\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "2\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "1\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "-2 -2 0 -1\n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "3 -1 2 2 -1 2\n",
+        "expected": "24"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "3\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "2 -3 2 -1\n",
+        "expected": "12"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "3 -3\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "2 -1 0 -1 -2 -3\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "3 2\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "-3 -2\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "0 0 -3\n",
+        "expected": "0"
+      }
+    ]
+  },
+  {
+    "id": "search-rotated-sorted",
+    "title": "Search in Rotated Sorted Array",
+    "difficulty": "medium",
+    "prompt": "Read a line of distinct space-separated integers that was originally sorted ascending then rotated, and a line with a target. Print the 0-based index of the target, or -1 if it is absent.\n\nInput:\n  4 5 6 7 0 1 2\n  0\nOutput:\n  4",
+    "spoken_intro": "A sorted array got rotated at some pivot. Find the target in it — ideally in log time — and print its index, or minus one if it's not there.",
+    "starter": {
+      "python": "nums = list(map(int, input().split()))\ntarget = int(input())\n\n# TODO: print the index of target, or -1\n",
+      "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n    int target;\n    cin >> target;\n\n    // TODO: print the index of target, or -1\n    return 0;\n}\n"
+    },
+    "tests": [
+      {
+        "name": "found",
+        "stdin": "4 5 6 7 0 1 2\n0\n",
+        "expected": "4"
+      },
+      {
+        "name": "absent",
+        "stdin": "4 5 6 7 0 1 2\n3\n",
+        "expected": "-1"
+      },
+      {
+        "name": "single",
+        "stdin": "1\n0\n",
+        "expected": "-1"
+      }
+    ],
+    "hidden_tests": [
+      {
+        "name": "hidden 1",
+        "stdin": "2 -10 -4 0\n-10\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 2",
+        "stdin": "6 7 8 14 0 4 5\n-3\n",
+        "expected": "-1"
+      },
+      {
+        "name": "hidden 3",
+        "stdin": "3 7 10 -10 -2 -1\n3\n",
+        "expected": "0"
+      },
+      {
+        "name": "hidden 4",
+        "stdin": "17 19 -8 -2 13\n-2\n",
+        "expected": "3"
+      },
+      {
+        "name": "hidden 5",
+        "stdin": "5 8 12 19 -4 1 4\n4\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 6",
+        "stdin": "13 16 -9 -8 -4 0 9 10\n9\n",
+        "expected": "6"
+      },
+      {
+        "name": "hidden 7",
+        "stdin": "14 -9 5 6\n-3\n",
+        "expected": "-1"
+      },
+      {
+        "name": "hidden 8",
+        "stdin": "-4 1 14 16 17 -8\n14\n",
+        "expected": "2"
+      },
+      {
+        "name": "hidden 9",
+        "stdin": "12 17 18 -7 -6 2 5\n-6\n",
+        "expected": "4"
+      },
+      {
+        "name": "hidden 10",
+        "stdin": "4 12 14 16 18 -9\n0\n",
+        "expected": "-1"
+      },
+      {
+        "name": "hidden 11",
+        "stdin": "-4 0 6 -5\n0\n",
+        "expected": "1"
+      },
+      {
+        "name": "hidden 12",
+        "stdin": "5 9 16 17 2 3\n2\n",
+        "expected": "4"
+      }
+    ]
   }
 ]

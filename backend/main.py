@@ -2,9 +2,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-import os, uuid, shutil
+from fastapi.concurrency import run_in_threadpool
+import os, uuid, shutil, random
 
 from ai_interviewer.config import load_config
+from ai_interviewer.parser import check_is_resume
+from backend import history
 from ai_interviewer.llm import create_llm
 from ai_interviewer.stt import create_stt
 from ai_interviewer.tts import LocalTTSClient
@@ -63,6 +66,24 @@ async def upload(file: UploadFile):
     with open(path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
+    # reject anything that isn't actually a resume before starting a session.
+    # runs off the event loop; the parse is cached so the later parse is free.
+    try:
+        looks_like_resume = await run_in_threadpool(
+            check_is_resume, path, app.state.llm
+        )
+    except Exception:
+        looks_like_resume = False
+    if not looks_like_resume:
+        os.remove(path)
+        return JSONResponse(
+            status_code=400,
+            content={"error": "This PDF doesn't look like a resume. Please upload your resume/CV."},
+        )
+
+    # pick a random voice for this interview and bind it to the session so every
+    # synth call uses it; the interviewer's name/gender persona follows the voice.
+    voice = random.choice(app.state.tts.voice_names())
 
     sessions[session_id] = InterviewSession(
         session_id=session_id,
@@ -70,11 +91,25 @@ async def upload(file: UploadFile):
         cfg=app.state.cfg,
         llm=app.state.llm,
         stt=app.state.stt,
-        tts=app.state.tts,
+        tts=app.state.tts.bound(voice),
         executor=app.state.executor,
+        voice=voice,
     )
 
     return {'session_id': session_id}
+
+
+@app.get("/history")
+async def history_list():
+    return {"interviews": history.list_interviews()}
+
+
+@app.get("/history/{hid}")
+async def history_get(hid: str):
+    record = history.get_interview(hid)
+    if record is None:
+        return JSONResponse(status_code=404, content={"error": "not found"})
+    return record
 
 
 @app.websocket("/ws/{session_id}")

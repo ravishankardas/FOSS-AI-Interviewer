@@ -172,7 +172,7 @@ def _history_to_text(history: List["Turn"]) -> str:
 
 
 def generate_adaptive_question(
-    resume: ResumeData, history: List["Turn"], llm: Any
+    resume: ResumeData, history: List["Turn"], llm: Any, persona: str = ""
 ) -> tuple[Question, int]:
     """Pick the next question on the fly from the resume + exchange so far.
 
@@ -180,13 +180,17 @@ def generate_adaptive_question(
     (the cheap steering signal) and produces the next question targeted to that
     rating. Returns (next_question, last_mastery); last_mastery is 0 when there's
     no prior answer to rate (the first adaptive turn).
+
+    `persona` (optional) is a sentence identifying the interviewer (name +
+    gender) prepended to the system prompt so the voice and persona line up.
     """
     prompt = (
         f"Resume:\n{_resume_to_text(resume)}\n\n"
         f"Exchange so far:\n{_history_to_text(history)}"
     )
+    system = f"{persona}\n{ADAPTIVE_SYSTEM_PROMPT}" if persona else ADAPTIVE_SYSTEM_PROMPT
     response = llm.complete(
-        prompt=prompt, system=ADAPTIVE_SYSTEM_PROMPT, response_schema=_AdaptiveSchema
+        prompt=prompt, system=system, response_schema=_AdaptiveSchema
     )
     data = json.loads(response)
     question = Question(text=data["next_text"], topic=data["next_topic"])
@@ -239,10 +243,14 @@ def generate_followup_stream(question: Question, answer: str, llm: Any):
     return llm.stream(prompt=prompt, system=system)
 
 
-def generate_code_followup_stream(coding_q: "CodingQuestion", language: str, code: str, output: str, llm: Any):
-    """Stream a spoken follow-up grounded on the candidate's submitted code."""
+def generate_code_followup_stream(coding_q: "CodingQuestion", language: str, code: str, output: str, llm: Any, persona: str = ""):
+    """Stream a spoken follow-up grounded on the candidate's submitted code.
+
+    `persona` (optional) prepends the interviewer's name/gender to the prompt.
+    """
     system = (
-        "You are a warm, engaged technical interviewer in a real spoken "
+        (persona + " " if persona else "")
+        + "You are a warm, engaged technical interviewer in a real spoken "
         "conversation. The candidate just solved a coding problem. Briefly react "
         "to their solution in a few natural words, then ask ONE follow-up about "
         "THEIR code — e.g. its time/space complexity, an edge case it might miss, "

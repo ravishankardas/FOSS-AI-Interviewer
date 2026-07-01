@@ -46,6 +46,7 @@ class _EducationSchema(BaseModel):
 
 
 class _ResumeSchema(BaseModel):
+    is_resume: bool
     name: str
     email: str
     phone: str
@@ -61,8 +62,15 @@ SYSTEM_PROMPT = """
     Do not include any explanation, markdown, or code fences. Return only the
     raw JSON object.
 
+    First decide whether the text is actually a person's resume / CV (i.e. it
+    describes an individual's work experience, skills, education, or projects).
+    Set "is_resume" to true if so, or false for anything else (an invoice, a
+    report, a random article, a blank/garbled document, etc.). If it is not a
+    resume, still return the other fields as empty strings / empty lists.
+
     The JSON must follow this exact structure:
     {
+        "is_resume": true,
         "name": "string",
         "email": "string",
         "phone": "string",
@@ -92,14 +100,36 @@ SYSTEM_PROMPT = """
 """
 
 
-def parse_resume(pdf_path: str, llm: Any) -> ResumeData:
+# below this, an extracted PDF has too little text to be a real resume
+# (e.g. a scanned/image-only PDF that yields no selectable text)
+MIN_RESUME_TEXT_CHARS = 80
+
+
+def _parse_raw(pdf_path: str, llm: Any, text: str | None = None) -> dict:
+    """Run (and cache) the structured parse, returning the raw JSON dict."""
     if pdf_path in store:
-        data = store[pdf_path]
-    else:
+        return store[pdf_path]
+    if text is None:
         text = get_text_from_pdf(pdf_path)
-        response = llm.complete(prompt=text, system=SYSTEM_PROMPT, response_schema=_ResumeSchema)
-        data = json.loads(response)
-        store[pdf_path] = data
+    response = llm.complete(prompt=text, system=SYSTEM_PROMPT, response_schema=_ResumeSchema)
+    data = json.loads(response)
+    store[pdf_path] = data
+    return data
+
+
+def check_is_resume(pdf_path: str, llm: Any) -> bool:
+    """True if the PDF looks like a real resume. Rejects near-empty PDFs
+    without an LLM call, then trusts the parser's own is_resume verdict.
+    Caches the parse so a later parse_resume() on the same path is free."""
+    text = get_text_from_pdf(pdf_path)
+    if len(text.strip()) < MIN_RESUME_TEXT_CHARS:
+        return False
+    data = _parse_raw(pdf_path, llm, text=text)
+    return bool(data.get("is_resume", True))
+
+
+def parse_resume(pdf_path: str, llm: Any) -> ResumeData:
+    data = _parse_raw(pdf_path, llm)
 
     return ResumeData(
         name=data.get("name", ""),

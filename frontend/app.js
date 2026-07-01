@@ -89,11 +89,33 @@ registerProcessor('pcm-collector', PCMCollector);
 `;
 
 // ── lamp + waveform ───────────────────────────────────
-function lampLive(on) { onairEl.classList.toggle("live", on); }
+// toggles the on-air lamp AND the ambient screen-edge glow together, so the
+// whole live session (voice + coding) reads as "the interviewer is watching"
+function lampLive(on) {
+  onairEl.classList.toggle("live", on);
+  document.body.classList.toggle("interview-live", on);
+}
 function setLabel(text) { onairLabel.textContent = text; }
 function setSpeaker(text) { speakerTag.textContent = text; }
 // show/animate the waveform whenever a party is talking
 function waveActive(on) { waveEl.classList.toggle("active", on); }
+
+// live captions — append a line to the interview transcript panel
+const transcriptEl = $("transcript");
+function addCaption(who, text) {
+  if (!text || !text.trim()) return;
+  const li = document.createElement("li");
+  li.className = "turn " + (who === "you" ? "you" : "interviewer");
+  const label = document.createElement("span");
+  label.className = "who";
+  label.textContent = who === "you" ? "You" : "Interviewer";
+  const said = document.createElement("span");
+  said.className = "said";
+  said.textContent = text.trim();
+  li.append(label, said);
+  transcriptEl.append(li);
+  li.scrollIntoView({ block: "nearest" });
+}
 
 function startLampLoop() {
   const tick = () => {
@@ -241,7 +263,7 @@ function ensureEditor() {
   if (editor) return editor;
   editor = CodeMirror.fromTextArea($("code-editor"), {
     mode: CM_MODE.python,
-    theme: "material-darker",
+    theme: "default",
     lineNumbers: true,
     indentUnit: 4,
     tabSize: 4,
@@ -259,6 +281,13 @@ function ensureEditor() {
       Enter: "newlineAndIndent",
     },
   });
+  // editing invalidates the last passing test run — re-lock Submit
+  editor.on("change", () => {
+    if (allTestsPassed) {
+      allTestsPassed = false;
+      refreshSubmitBtn();
+    }
+  });
   // pop completions as you type a word (not on every keystroke)
   editor.on("inputRead", (cm, change) => {
     if (cm.state.completionActive) return;
@@ -272,6 +301,8 @@ function ensureEditor() {
 
 let currentTests = [];   // visible test cases for the active coding question
 let currentStarter = {}; // per-language starter code for the active question
+let codingBusy = false;  // an execution request is in flight
+let allTestsPassed = false; // every visible test passed on the last run
 
 // the starter for a language: problem-specific if provided, else generic fallback
 function starterFor(lang) {
@@ -279,9 +310,20 @@ function starterFor(lang) {
 }
 
 function setCodingBusy(busy) {
+  codingBusy = busy;
   runCodeBtn.disabled = busy;
   runTestsBtn.disabled = busy;
-  submitCodeBtn.disabled = busy;
+  refreshSubmitBtn();
+}
+
+// Submit stays locked until every visible test passes (and no run is in flight).
+// Editing the code after a green run re-locks it — the passing run no longer
+// reflects what's in the editor.
+function refreshSubmitBtn() {
+  submitCodeBtn.disabled = codingBusy || !allTestsPassed;
+  submitCodeBtn.title = allTestsPassed
+    ? ""
+    : "Pass all visible test cases to unlock Submit";
 }
 
 // ── coding timer ──────────────────────────────────────
@@ -339,12 +381,12 @@ function renderTests(results) {
       const cls = r ? (r.passed ? "pass" : "fail") : "";
       const status = r ? (r.passed ? "pass" : "fail") : "not run";
       const stdinRow = t.stdin
-        ? `<div><span class="k">in:  </span>${esc(t.stdin.replace(/\n/g, "⏎"))}</div>`
+        ? `<div><span class="k">in:</span>${esc(t.stdin.replace(/\n+$/, "")).replace(/\n/g, "<br>")}</div>`
         : "";
-      const expRow = `<div><span class="k">want:</span> ${esc(t.expected)}</div>`;
+      const expRow = `<div><span class="k">want:</span>${esc(t.expected)}</div>`;
       const gotRow =
         r && !r.passed
-          ? `<div><span class="k">got: </span><span class="got-bad">${esc(
+          ? `<div><span class="k">got:</span><span class="got-bad">${esc(
               r.error || r.actual || "(no output)"
             )}</span></div>`
           : "";
@@ -368,6 +410,7 @@ function showCoding(msg) {
   codingOutputEl.className = "coding-output";
   currentTests = msg.tests || [];
   currentStarter = msg.starter || {};
+  allTestsPassed = false;   // must pass the visible tests before submitting
   renderTests(null);
 
   interviewEl.hidden = true;
@@ -432,7 +475,16 @@ async function startInterview(e) {
   if (!candidateName) { showError("Enter your name to begin."); return; }
   if (!file) { showError("Choose a PDF resume to begin."); return; }
 
-  $("start").disabled = true;
+  const startBtn = $("start");
+  const startHTML = startBtn.innerHTML;
+  const restoreStart = () => {
+    startBtn.disabled = false;
+    startBtn.classList.remove("loading");
+    startBtn.innerHTML = startHTML;
+  };
+  startBtn.disabled = true;
+  startBtn.classList.add("loading");
+  startBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Checking résumé…';
   try {
     const form = new FormData();
     form.append("file", file);
@@ -490,8 +542,13 @@ async function startInterview(e) {
           setLabel("On air");
           setSpeaker("Got it — thinking…");
           break;
+        case "caption":
+          // live captions: the interviewer just said something
+          addCaption(msg.who || "interviewer", msg.text);
+          break;
         case "transcribed":
-          // transcripts are no longer shown live (kept server-side for the report)
+          // the candidate's answer, transcribed — show it as a caption line
+          addCaption("you", msg.text);
           break;
         case "coding_question":
           showCoding(msg);
@@ -500,12 +557,16 @@ async function startInterview(e) {
           renderRunResult(msg);
           break;
         case "test_results": {
-          setCodingBusy(false);
           renderTests(msg.results);
           const passed = msg.results.filter((r) => r.passed).length;
-          codingOutputEl.textContent = `${passed}/${msg.results.length} test cases passed.`;
+          allTestsPassed =
+            msg.results.length > 0 && passed === msg.results.length;
+          setCodingBusy(false);
+          codingOutputEl.textContent = allTestsPassed
+            ? `${passed}/${msg.results.length} test cases passed — you can submit now.`
+            : `${passed}/${msg.results.length} test cases passed.`;
           codingOutputEl.className =
-            "coding-output " + (passed === msg.results.length ? "ok" : "err");
+            "coding-output " + (allTestsPassed ? "ok" : "err");
           break;
         }
         case "engine_error":
@@ -547,7 +608,7 @@ async function startInterview(e) {
     };
   } catch (err) {
     showError(err.message || String(err));
-    $("start").disabled = false;
+    restoreStart();
     setupEl.hidden = false;
     interviewEl.hidden = true;
   }
@@ -642,3 +703,136 @@ $("restart").addEventListener("click", () => location.reload());
     });
   }
 });
+
+// ── interview history ─────────────────────────────────
+const historyEl = $("history");
+const historyListEl = $("history-list");
+const historyDetailEl = $("history-detail");
+const historyEmptyEl = $("history-empty");
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return isNaN(d.getTime())
+    ? iso
+    : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+async function openHistory() {
+  errorEl.hidden = true;
+  setupEl.hidden = true;
+  historyEl.hidden = false;
+  historyDetailEl.hidden = true;
+  historyListEl.hidden = false;
+  historyEmptyEl.hidden = true;
+  historyListEl.innerHTML = "";
+  try {
+    const resp = await fetch("/history");
+    const { interviews } = await resp.json();
+    if (!interviews || !interviews.length) { historyEmptyEl.hidden = false; return; }
+    for (const it of interviews) historyListEl.append(historyRow(it));
+  } catch {
+    showError("Couldn't load your interview history.");
+  }
+}
+
+function historyRow(it) {
+  const li = document.createElement("li");
+  const rec = (it.recommendation || "").toUpperCase();
+  const recClass = rec === "NO_HIRE" ? "no" : (rec.includes("HIRE") ? "hire" : "");
+
+  const left = document.createElement("div");
+  const name = document.createElement("div");
+  name.className = "h-name";
+  name.textContent = it.candidate_name || "Candidate";
+  const date = document.createElement("div");
+  date.className = "h-date";
+  date.textContent = fmtDate(it.created_at);
+  left.append(name, date);
+
+  const right = document.createElement("div");
+  right.style.textAlign = "right";
+  const score = document.createElement("div");
+  score.className = "h-score";
+  score.textContent = (it.avg_score != null ? it.avg_score : "–") + " / 10";
+  const recTag = document.createElement("div");
+  recTag.className = "h-rec " + recClass;
+  recTag.textContent = rec.replace("_", " ") || "—";
+  right.append(score, recTag);
+
+  li.append(left, right);
+  li.addEventListener("click", () => openHistoryDetail(it.id));
+  return li;
+}
+
+async function openHistoryDetail(id) {
+  try {
+    const resp = await fetch(`/history/${id}`);
+    if (!resp.ok) throw new Error();
+    const rec = await resp.json();
+    historyDetailEl.innerHTML = renderMarkdown(rec.markdown || "");
+    historyListEl.hidden = true;
+    historyEmptyEl.hidden = true;
+    historyDetailEl.hidden = false;
+  } catch {
+    showError("Couldn't load that interview.");
+  }
+}
+
+$("show-history").addEventListener("click", openHistory);
+$("history-back").addEventListener("click", () => {
+  if (!historyDetailEl.hidden) {
+    openHistory();            // detail open → back to the list
+  } else {
+    historyEl.hidden = true;  // list open → back to setup
+    setupEl.hidden = false;
+  }
+});
+
+// ── dev preview mode ──────────────────────────────────
+// Jump straight to a stage with mock data — no upload, no WebSocket — so you can
+// tweak the UI and just hard-refresh instead of re-running the whole interview.
+//   ?preview=coding     the coding editor with a sample problem
+//   ?preview=interview  the live "on air" voice stage
+//   ?preview=report     a sample report
+// Has no effect on the normal flow (only runs when ?preview=... is present).
+(function initPreview() {
+  // dev-only: never runs off localhost, so it's inert in any real deployment
+  const local = ["localhost", "127.0.0.1", "::1", ""].includes(location.hostname);
+  const stage = new URLSearchParams(location.search).get("preview");
+  if (!stage || !local) return;
+  setupEl.hidden = true;
+
+  if (stage === "coding") {
+    showCoding({
+      title: "Two Sum (preview)",
+      prompt: "Read a line of space-separated integers, then a target on the next "
+        + "line. Print the 0-based indices of the two numbers that add up to the "
+        + "target.\n\nInput:\n  2 7 11 15\n  9\nOutput:\n  0 1",
+      time_limit: 300,
+      starter: {},
+      tests: [
+        { name: "example", stdin: "2 7 11 15\n9\n", expected: "0 1" },
+        { name: "adjacent", stdin: "3 3\n6\n", expected: "0 1" },
+      ],
+    });
+    lampLive(true);
+  } else if (stage === "interview") {
+    interviewEl.hidden = false;
+    startLampLoop();
+    lampLive(true);
+    setLabel("On air");
+    setSpeaker("Preview — the interviewer is speaking.");
+    waveActive(true);
+  } else if (stage === "history") {
+    openHistory();
+  } else if (stage === "report") {
+    reportEl.hidden = false;
+    $("report-body").innerHTML = renderMarkdown(
+      "# Interview Report - Preview\n\n## Per-Question Breakdown\n\n"
+      + "### Q1: Tell me about a project (Topic: experience)\n"
+      + "- **Score:** 8\n- **Feedback:** Strong, concrete example.\n\n"
+      + "## Overall Summary\nSolid across the board.\n\n"
+      + "## Recommendation\nLEAN_HIRE\n"
+    );
+  }
+})();

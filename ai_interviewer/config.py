@@ -26,6 +26,12 @@ class TTSConfig:
     voice: str = "en_US-lessac-medium"
     speed: float = 1.0
     model_path: str = "models/en/en_US/lessac/medium/en_US-lessac-medium.onnx"
+    # named voice registry: voice-name -> .onnx path. If `voice` names a key
+    # here, its path is used; otherwise fall back to model_path above.
+    voices: dict = field(default_factory=dict)
+
+    def resolved_model_path(self) -> str:
+        return self.voices.get(self.voice, self.model_path)
 
 
 @dataclass

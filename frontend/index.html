@@ -7,10 +7,9 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M7 3.5 L19 3.5 A4.5 4.5 0 0 1 23.5 8 L23.5 14 A4.5 4.5 0 0 1 19 18.5 L12 18.5 L7.5 22.5 L7.5 18.5 L7 18.5 A4.5 4.5 0 0 1 2.5 14 L2.5 8 A4.5 4.5 0 0 1 7 3.5 Z' fill='%23191510' stroke='%23E8A33D' stroke-width='1.4' stroke-linejoin='round'/%3E%3Cg stroke='%23ECE6DA' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='8.5' y1='13.5' x2='8.5' y2='8.5'/%3E%3Cline x1='12' y1='14.8' x2='12' y2='7.2'/%3E%3Cline x1='15.5' y1='13.5' x2='15.5' y2='8.5'/%3E%3Cline x1='19' y1='12.5' x2='19' y2='9.5'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- CodeMirror 5 (editor for the coding round) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/show-hint.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
@@ -22,13 +21,16 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- ambient edge-glow: lights up while the interview is live, as if the
+       interviewer is watching the screen -->
+  <div class="screen-glow" aria-hidden="true"></div>
   <div class="frame">
     <header class="topbar">
       <span class="brand">
         <svg class="logo" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
           <path d="M7 3.5 L19 3.5 A4.5 4.5 0 0 1 23.5 8 L23.5 14 A4.5 4.5 0 0 1 19 18.5 L12 18.5 L7.5 22.5 L7.5 18.5 L7 18.5 A4.5 4.5 0 0 1 2.5 14 L2.5 8 A4.5 4.5 0 0 1 7 3.5 Z"
-                fill="rgba(232,163,61,0.07)" stroke="var(--amber)" stroke-width="1.4" stroke-linejoin="round"/>
-          <g stroke="var(--ink)" stroke-width="2" stroke-linecap="round">
+                fill="var(--accent-sw)" stroke="var(--accent)" stroke-width="1.4" stroke-linejoin="round"/>
+          <g stroke="var(--accent)" stroke-width="2" stroke-linecap="round">
             <line x1="8.5"  y1="13.5" x2="8.5"  y2="8.5"/>
             <line x1="12"   y1="14.8" x2="12"   y2="7.2"/>
             <line x1="15.5" y1="13.5" x2="15.5" y2="8.5"/>
@@ -66,6 +68,7 @@
         </button>
       </form>
       <p class="micnote">You'll be asked for microphone access when it starts.</p>
+      <button id="show-history" type="button" class="linklike">View past interviews →</button>
     </section>
 
     <!-- ──────────────── INTERVIEW ──────────────── -->
@@ -81,6 +84,8 @@
       </div>
 
       <div id="speaker-tag" class="speaker-tag">&nbsp;</div>
+
+      <ul id="transcript" class="transcript" aria-live="polite"></ul>
 
       <button id="view-report" type="button" class="begin" hidden>
         View report <span aria-hidden="true">→</span>
@@ -138,6 +143,18 @@
         <button id="restart" type="button" class="restart-btn">
           New interview <span aria-hidden="true">↺</span>
         </button>
+      </div>
+    </section>
+
+    <!-- ───────────────── HISTORY ───────────────── -->
+    <section id="history" class="stage" hidden>
+      <p class="eyebrow">History</p>
+      <h1 class="display history-title">Past interviews</h1>
+      <ul id="history-list" class="history-list"></ul>
+      <p id="history-empty" class="lede" hidden>No past interviews yet — finish one and it'll show up here.</p>
+      <article id="history-detail" class="dossier" hidden></article>
+      <div class="report-actions">
+        <button id="history-back" type="button" class="restart-btn">← Back</button>
       </div>
     </section>
 

@@ -400,6 +400,159 @@ def _gen_happy(rng):
     return f"{rng.randint(1, 200)}\n"
 
 
+# ----- batch 3 solvers/generators (medium) -----
+# Every problem here has a single unambiguous correct output (a unique int,
+# count, index, or canonical string) so the exact-match grader stays fair.
+
+def _solve_max_subarray(stdin):
+    nums = _ints(_first_line(stdin))
+    best = cur = nums[0]
+    for x in nums[1:]:
+        cur = max(x, cur + x)
+        best = max(best, cur)
+    return str(best)
+
+
+def _gen_max_subarray(rng):
+    return " ".join(str(rng.randint(-5, 5)) for _ in range(rng.randint(1, 10))) + "\n"
+
+
+def _solve_longest_unique(stdin):
+    s = _first_line(stdin)
+    last, start, best = {}, 0, 0
+    for i, c in enumerate(s):
+        if c in last and last[c] >= start:
+            start = last[c] + 1
+        last[c] = i
+        best = max(best, i - start + 1)
+    return str(best)
+
+
+def _gen_longest_unique(rng):
+    return "".join(rng.choice("abcd") for _ in range(rng.randint(0, 12))) + "\n"
+
+
+def _solve_max_area(stdin):
+    h = _ints(_first_line(stdin))
+    i, j, best = 0, len(h) - 1, 0
+    while i < j:
+        best = max(best, (j - i) * min(h[i], h[j]))
+        if h[i] < h[j]:
+            i += 1
+        else:
+            j -= 1
+    return str(best)
+
+
+def _gen_max_area(rng):
+    return " ".join(str(rng.randint(0, 9)) for _ in range(rng.randint(2, 10))) + "\n"
+
+
+def _solve_coin_change(stdin):
+    lines = stdin.split("\n")
+    coins, amount = _ints(lines[0]), int(lines[1])
+    INF = amount + 1
+    dp = [0] + [INF] * amount
+    for a in range(1, amount + 1):
+        for c in coins:
+            if c <= a:
+                dp[a] = min(dp[a], dp[a - c] + 1)
+    return str(dp[amount] if dp[amount] != INF else -1)
+
+
+def _gen_coin_change(rng):
+    coins = sorted(rng.sample([1, 2, 3, 5, 7, 10], rng.randint(1, 3)))
+    return f"{' '.join(map(str, coins))}\n{rng.randint(0, 25)}\n"
+
+
+def _solve_house_robber(stdin):
+    prev = cur = 0
+    for x in _ints(_first_line(stdin)):
+        prev, cur = cur, max(cur, prev + x)
+    return str(cur)
+
+
+def _gen_house_robber(rng):
+    return " ".join(str(rng.randint(0, 10)) for _ in range(rng.randint(1, 10))) + "\n"
+
+
+def _solve_unique_paths(stdin):
+    m, n = _ints(_first_line(stdin))
+    dp = [1] * n
+    for _ in range(1, m):
+        for j in range(1, n):
+            dp[j] += dp[j - 1]
+    return str(dp[-1])
+
+
+def _gen_unique_paths(rng):
+    return f"{rng.randint(1, 8)} {rng.randint(1, 8)}\n"
+
+
+def _solve_decode_ways(stdin):
+    s = _first_line(stdin).strip()
+    if not s:
+        return "0"
+    n = len(s)
+    dp = [0] * (n + 1)
+    dp[0] = 1
+    dp[1] = 0 if s[0] == "0" else 1
+    for i in range(2, n + 1):
+        if s[i - 1] != "0":
+            dp[i] += dp[i - 1]
+        if 10 <= int(s[i - 2:i]) <= 26:
+            dp[i] += dp[i - 2]
+    return str(dp[n])
+
+
+def _gen_decode_ways(rng):
+    return "".join(rng.choice("0123456789") for _ in range(rng.randint(1, 6))) + "\n"
+
+
+def _solve_max_product(stdin):
+    nums = _ints(_first_line(stdin))
+    best = hi = lo = nums[0]
+    for x in nums[1:]:
+        cands = (x, hi * x, lo * x)
+        hi, lo = max(cands), min(cands)
+        best = max(best, hi)
+    return str(best)
+
+
+def _gen_max_product(rng):
+    return " ".join(str(rng.randint(-3, 3)) for _ in range(rng.randint(1, 8))) + "\n"
+
+
+def _solve_search_rotated(stdin):
+    lines = stdin.split("\n")
+    nums, target = _ints(lines[0]), int(lines[1])
+    lo, hi = 0, len(nums) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if nums[mid] == target:
+            return str(mid)
+        if nums[lo] <= nums[mid]:
+            if nums[lo] <= target < nums[mid]:
+                hi = mid - 1
+            else:
+                lo = mid + 1
+        else:
+            if nums[mid] < target <= nums[hi]:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+    return "-1"
+
+
+def _gen_search_rotated(rng):
+    n = rng.randint(1, 8)
+    base = sorted(rng.sample(range(-10, 20), n))
+    k = rng.randint(0, n - 1)
+    nums = base[k:] + base[:k]
+    target = rng.choice(nums) if rng.random() < 0.6 else rng.randint(-12, 22)
+    return f"{' '.join(map(str, nums))}\n{target}\n"
+
+
 # ---------------------------------------------------------------------------
 # batch 1 — 10 clean stdin/stdout problems from the Top Interview 150
 # ---------------------------------------------------------------------------
@@ -783,6 +936,178 @@ PROBLEMS: list[Problem] = [
         },
         visible=[("happy", "19\n"), ("unhappy", "2\n"), ("one", "1\n")],
         gen=_gen_happy, solve=_solve_happy,
+    ),
+
+    # ----- batch 3 (medium) -----
+    Problem(
+        id="maximum-subarray",
+        title="Maximum Subarray",
+        difficulty="medium",
+        prompt=("Read a line of space-separated integers. Print the largest sum obtainable from a "
+                "contiguous subarray (at least one element).\n\n"
+                "Input:\n  -2 1 -3 4 -1 2 1 -5 4\nOutput:\n  6"),
+        spoken_intro=("A classic — Kadane's. Given a list of integers, find the contiguous stretch "
+                      "with the largest sum and print that sum. Run the tests and submit when ready."),
+        starter={
+            "python": "nums = list(map(int, input().split()))\n\n# TODO: print the maximum contiguous subarray sum\n",
+            "c++": ("#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\n"
+                    "int main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n"
+                    "    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n"
+                    "    // TODO: print the maximum contiguous subarray sum\n    return 0;\n}\n"),
+        },
+        visible=[("example", "-2 1 -3 4 -1 2 1 -5 4\n"), ("all negative", "-3 -1 -2\n"), ("single", "1\n")],
+        gen=_gen_max_subarray, solve=_solve_max_subarray,
+    ),
+    Problem(
+        id="longest-substring-no-repeat",
+        title="Longest Substring Without Repeating Characters",
+        difficulty="medium",
+        prompt=("Read a line (lowercase letters, possibly empty). Print the length of the longest "
+                "substring that contains no repeated character.\n\n"
+                "Input:\n  abcabcbb\nOutput:\n  3"),
+        spoken_intro=("A sliding-window one. Given a string, find the longest run with no repeated "
+                      "character and print its length. Run the tests and submit when ready."),
+        starter={
+            "python": "s = input()\n\n# TODO: print the length of the longest substring without repeats\n",
+            "c++": ("#include <iostream>\n#include <string>\nusing namespace std;\n\n"
+                    "int main() {\n    string s;\n    getline(cin, s);\n\n"
+                    "    // TODO: print the length of the longest substring without repeats\n    return 0;\n}\n"),
+        },
+        visible=[("example", "abcabcbb\n"), ("all same", "bbbbb\n"), ("mixed", "pwwkew\n")],
+        gen=_gen_longest_unique, solve=_solve_longest_unique,
+    ),
+    Problem(
+        id="container-most-water",
+        title="Container With Most Water",
+        difficulty="medium",
+        prompt=("Read a line of space-separated non-negative integers (heights of vertical lines). "
+                "Choosing two lines, the water they hold is the shorter height times their distance "
+                "apart. Print the maximum.\n\nInput:\n  1 8 6 2 5 4 8 3 7\nOutput:\n  49"),
+        spoken_intro=("Two-pointer time. Each number is the height of a vertical line; pick two to "
+                      "hold the most water — shorter side times the gap. Print the maximum area."),
+        starter={
+            "python": "height = list(map(int, input().split()))\n\n# TODO: print the maximum water the container can hold\n",
+            "c++": ("#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\n"
+                    "int main() {\n    string line;\n    getline(cin, line);\n    vector<int> height;\n"
+                    "    stringstream ss(line);\n    int x;\n    while (ss >> x) height.push_back(x);\n\n"
+                    "    // TODO: print the maximum water the container can hold\n    return 0;\n}\n"),
+        },
+        visible=[("example", "1 8 6 2 5 4 8 3 7\n"), ("two lines", "1 1\n"), ("tall ends", "4 3 2 1 4\n")],
+        gen=_gen_max_area, solve=_solve_max_area,
+    ),
+    Problem(
+        id="coin-change",
+        title="Coin Change",
+        difficulty="medium",
+        prompt=("Read a line of space-separated coin denominations, then a line with a target amount. "
+                "Print the fewest coins that sum to the amount, or -1 if it cannot be made.\n\n"
+                "Input:\n  1 2 5\n  11\nOutput:\n  3"),
+        spoken_intro=("A DP one. Given coin denominations and a target amount, print the fewest coins "
+                      "that make the amount, or minus one if it's impossible. Submit when ready."),
+        starter={
+            "python": "coins = list(map(int, input().split()))\namount = int(input())\n\n# TODO: print the fewest coins to make amount, or -1\n",
+            "c++": ("#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\n"
+                    "int main() {\n    string line;\n    getline(cin, line);\n    vector<int> coins;\n"
+                    "    stringstream ss(line);\n    int x;\n    while (ss >> x) coins.push_back(x);\n"
+                    "    int amount;\n    cin >> amount;\n\n"
+                    "    // TODO: print the fewest coins to make amount, or -1\n    return 0;\n}\n"),
+        },
+        visible=[("example", "1 2 5\n11\n"), ("impossible", "2\n3\n"), ("zero amount", "1 2 5\n0\n")],
+        gen=_gen_coin_change, solve=_solve_coin_change,
+    ),
+    Problem(
+        id="house-robber",
+        title="House Robber",
+        difficulty="medium",
+        prompt=("Read a line of space-separated non-negative integers (money in each house). You "
+                "cannot rob two adjacent houses. Print the maximum you can rob.\n\n"
+                "Input:\n  2 7 9 3 1\nOutput:\n  12"),
+        spoken_intro=("Another DP. Each number is the cash in a house, but you can't hit two houses "
+                      "in a row. Print the maximum you can take. Run the tests and submit when ready."),
+        starter={
+            "python": "nums = list(map(int, input().split()))\n\n# TODO: print the maximum non-adjacent sum\n",
+            "c++": ("#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\n"
+                    "int main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n"
+                    "    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n"
+                    "    // TODO: print the maximum non-adjacent sum\n    return 0;\n}\n"),
+        },
+        visible=[("example", "2 7 9 3 1\n"), ("small", "1 2 3 1\n"), ("single", "5\n")],
+        gen=_gen_house_robber, solve=_solve_house_robber,
+    ),
+    Problem(
+        id="unique-paths",
+        title="Unique Paths",
+        difficulty="medium",
+        prompt=("Read two integers m and n on one line: the number of rows and columns of a grid. "
+                "Starting top-left and moving only right or down, print how many distinct paths "
+                "reach the bottom-right cell.\n\nInput:\n  3 7\nOutput:\n  28"),
+        spoken_intro=("On an m-by-n grid you move only right or down from the top-left. Print how "
+                      "many distinct paths reach the bottom-right corner. Submit when ready."),
+        starter={
+            "python": "m, n = map(int, input().split())\n\n# TODO: print the number of distinct paths\n",
+            "c++": ("#include <iostream>\nusing namespace std;\n\n"
+                    "int main() {\n    int m, n;\n    cin >> m >> n;\n\n"
+                    "    // TODO: print the number of distinct paths\n    return 0;\n}\n"),
+        },
+        visible=[("example", "3 7\n"), ("square", "3 3\n"), ("single row", "1 5\n")],
+        gen=_gen_unique_paths, solve=_solve_unique_paths,
+    ),
+    Problem(
+        id="decode-ways",
+        title="Decode Ways",
+        difficulty="medium",
+        prompt=("Read a line of digits. Using the mapping A=1, B=2, ..., Z=26, print the number of "
+                "ways to decode the string into letters. A leading zero in any group is invalid.\n\n"
+                "Input:\n  226\nOutput:\n  3"),
+        spoken_intro=("Digits map to letters — one is A, up to twenty-six is Z. Print how many ways "
+                      "the digit string can be decoded, watching out for zeros. Submit when ready."),
+        starter={
+            "python": "s = input().strip()\n\n# TODO: print the number of ways to decode s\n",
+            "c++": ("#include <iostream>\n#include <string>\nusing namespace std;\n\n"
+                    "int main() {\n    string s;\n    getline(cin, s);\n\n"
+                    "    // TODO: print the number of ways to decode s\n    return 0;\n}\n"),
+        },
+        visible=[("example", "226\n"), ("leading zero", "06\n"), ("simple", "12\n")],
+        gen=_gen_decode_ways, solve=_solve_decode_ways,
+    ),
+    Problem(
+        id="maximum-product-subarray",
+        title="Maximum Product Subarray",
+        difficulty="medium",
+        prompt=("Read a line of space-separated integers. Print the largest product obtainable from "
+                "a contiguous subarray (at least one element).\n\n"
+                "Input:\n  2 3 -2 4\nOutput:\n  6"),
+        spoken_intro=("Like maximum subarray, but with products — and negatives can flip the sign. "
+                      "Print the largest product of a contiguous stretch. Submit when ready."),
+        starter={
+            "python": "nums = list(map(int, input().split()))\n\n# TODO: print the maximum contiguous product\n",
+            "c++": ("#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\n"
+                    "int main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n"
+                    "    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n"
+                    "    // TODO: print the maximum contiguous product\n    return 0;\n}\n"),
+        },
+        visible=[("example", "2 3 -2 4\n"), ("with zero", "-2 0 -1\n"), ("negatives", "-2 3 -4\n")],
+        gen=_gen_max_product, solve=_solve_max_product,
+    ),
+    Problem(
+        id="search-rotated-sorted",
+        title="Search in Rotated Sorted Array",
+        difficulty="medium",
+        prompt=("Read a line of distinct space-separated integers that was originally sorted "
+                "ascending then rotated, and a line with a target. Print the 0-based index of the "
+                "target, or -1 if it is absent.\n\nInput:\n  4 5 6 7 0 1 2\n  0\nOutput:\n  4"),
+        spoken_intro=("A sorted array got rotated at some pivot. Find the target in it — ideally in "
+                      "log time — and print its index, or minus one if it's not there."),
+        starter={
+            "python": "nums = list(map(int, input().split()))\ntarget = int(input())\n\n# TODO: print the index of target, or -1\n",
+            "c++": ("#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\n"
+                    "int main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n"
+                    "    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n"
+                    "    int target;\n    cin >> target;\n\n"
+                    "    // TODO: print the index of target, or -1\n    return 0;\n}\n"),
+        },
+        visible=[("found", "4 5 6 7 0 1 2\n0\n"), ("absent", "4 5 6 7 0 1 2\n3\n"), ("single", "1\n0\n")],
+        gen=_gen_search_rotated, solve=_solve_search_rotated,
     ),
 ]
 

@@ -24,9 +24,12 @@ class LocalLLMClient:
         )
         self._temperature = cfg.temperature
 
-    def complete(self, prompt: str, system: str = "", response_schema=None) -> str:
+    def complete(self, prompt: str, system: str = "", response_schema=None,
+                 temperature: float | None = None) -> str:
         # response_schema is a no-op here: llama_cpp has no native structured
         # output, so JSON callers must keep relying on prompt instructions.
+        # temperature overrides the config default per-call (graders pass 0.0
+        # for deterministic, repeatable scoring).
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -34,7 +37,7 @@ class LocalLLMClient:
 
         response = self._llm.create_chat_completion(
             messages=messages,
-            temperature=self._temperature,
+            temperature=self._temperature if temperature is None else temperature,
         )
         return response["choices"][0]["message"]["content"]   # type: ignore
 
@@ -79,17 +82,28 @@ class GeminiLLMClient:
         self._client = genai.Client(
             api_key=os.environ["GEMINI_API_KEY"],
             http_options=genai.types.HttpOptions(
-                client_args={"limits": httpx.Limits(max_keepalive_connections=0)},
+                client_args={
+                    # cap each request so a dropped/idle socket can't hang a call
+                    # forever (raises httpx.TimeoutException instead)
+                    "timeout": 120.0,
+                    "limits": httpx.Limits(max_keepalive_connections=0),
+                },
             ),
         )
         self.model_name = cfg.model_name
 
-    def complete(self, prompt: str, system: str = "", response_schema=None) -> str:
+    def complete(self, prompt: str, system: str = "", response_schema=None,
+                 temperature: float | None = None) -> str:
         # disable model "thinking" — these are simple structured tasks and the
         # thinking phase adds several seconds of latency for no benefit.
         config_kwargs = {"thinking_config": genai.types.ThinkingConfig(thinking_budget=0)}
         if system:
             config_kwargs["system_instruction"] = system
+        if temperature is not None:
+            # graders pass 0.0 so a given answer scores the same every run;
+            # Gemini's default sampling temperature (~1.0) is a big source of
+            # score drift otherwise.
+            config_kwargs["temperature"] = temperature
         if response_schema is not None:
             # native JSON mode: API guarantees valid, parseable JSON
             config_kwargs["response_mime_type"] = "application/json"

@@ -5,6 +5,7 @@ Installed as the `ai-interviewer` command (see pyproject.toml). Run:
     ai-interviewer --start
 
 to launch the backend server in this terminal and open the frontend in Chrome.
+Add --reload to auto-restart the server whenever code changes (dev mode).
 """
 import argparse
 import os
@@ -87,6 +88,10 @@ def main() -> None:
     parser.add_argument(
         "--no-browser", action="store_true", help="don't open the browser",
     )
+    parser.add_argument(
+        "--reload", action="store_true",
+        help="auto-restart the server when code changes (dev mode)",
+    )
     args = parser.parse_args()
 
     if not args.start:
@@ -101,10 +106,19 @@ def main() -> None:
     if not args.no_browser:
         threading.Thread(target=_open_when_ready, args=(url,), daemon=True).start()
 
-    print(f"Starting FOSS AI Interviewer on {url} (Ctrl+C to stop)")
+    mode = " [reload]" if args.reload else ""
+    print(f"Starting FOSS AI Interviewer on {url}{mode} (Ctrl+C to stop)")
     import uvicorn
 
-    uvicorn.run("backend.main:app", host=host, port=port)
+    # reload watches the whole repo; restarts the server on any .py change, plus
+    # config.yaml (so voice/config edits take effect without a manual restart).
+    # note: a restart re-runs startup (models reload), so keep this dev-only.
+    uvicorn.run(
+        "backend.main:app", host=host, port=port,
+        reload=args.reload,
+        reload_dirs=[BASE_DIR] if args.reload else None,
+        reload_includes=["*.py", "*.yaml"] if args.reload else None,
+    )
 
 
 if __name__ == "__main__":

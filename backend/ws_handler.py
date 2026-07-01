@@ -11,7 +11,8 @@ from ai_interviewer.question_gen import (
     generate_code_followup_stream,
     pick_coding_questions,
 )
-from ai_interviewer.report import evaluate_answer, evaluate_code, generate_report, to_markdown
+from ai_interviewer.report import evaluate_answer, evaluate_code, generate_report, to_markdown, InterviewReport
+from backend import history as history_store
 from ai_interviewer.sentence_splitter import SentenceSplitter
 from .session import InterviewSession, SessionState
 import json
@@ -87,6 +88,12 @@ async def _send_audio(ws: WebSocket, session: InterviewSession, wav: bytes):
     await ws.send_bytes(data=wav)
 
 
+async def _caption(ws: WebSocket, who: str, text: str):
+    # push a live caption line to the client transcript panel (who = interviewer|you)
+    if text and text.strip():
+        await ws.send_json({"type": "caption", "who": who, "text": text.strip()})
+
+
 async def _aiter_blocking(make_gen):
     # bridge a blocking generator (the LLM token stream) onto the event loop:
     # run it in a thread and hand tokens back through an asyncio.Queue so we can
@@ -133,7 +140,9 @@ async def _speak_stream(ws: WebSocket, session: InterviewSession, make_gen) -> s
     for sentence in splitter.flush():
         await _say(sentence)
 
-    return "".join(parts).strip()
+    full = "".join(parts).strip()
+    await _caption(ws, "interviewer", full)
+    return full
 
 
 
@@ -162,6 +171,7 @@ async def _ask_question(ws: WebSocket, session: InterviewSession, question: Ques
 
     session.state = SessionState.SPEAKING
     logger.info(f"[{session.session_id[:8]}] asking: {question.text}")
+    await _caption(ws, "interviewer", question.text)
     if wav_bytes is None:
         wav_bytes = await run_in_executor(session.tts.synthesize, question.text)
     await _send_audio(ws, session, wav_bytes)
@@ -303,8 +313,38 @@ async def _stt_worker(ws: WebSocket, session: InterviewSession, queue: asyncio.Q
         finally:
             queue.task_done()
 
+# the interviewer takes on a name + gender that match the chosen TTS voice
+# (config tts.voice), so the persona, the name, and the voice all line up.
+VOICE_INTERVIEWERS = {
+    "en_US-lessac-medium": ("Vanya", "female"),
+    "en_US-amy-medium": ("Amy", "female"),
+    "en_US-ryan-medium": ("Ryan", "male"),
+    "en_US-hfc_female-medium": ("Grace", "female"),
+    "en_GB-alan-medium": ("Alan", "male"),
+}
+DEFAULT_INTERVIEWER = ("Vanya", "female")
+
+
+def _interviewer(session):
+    # the voice is chosen per interview (session.voice); fall back to config
+    voice = session.voice or session.cfg.tts.voice
+    return VOICE_INTERVIEWERS.get(voice, DEFAULT_INTERVIEWER)
+
+
+def _interviewer_name(session) -> str:
+    return _interviewer(session)[0]
+
+
+def _interviewer_persona(session) -> str:
+    """A sentence identifying the interviewer, injected into the LLM prompts so
+    the generated questions match the chosen voice's name and gender."""
+    name, gender = _interviewer(session)
+    pronoun = "she/her" if gender == "female" else "he/him"
+    return f"You are {name}, a {gender} technical interviewer ({pronoun})."
+
+
 GREETING = (
-    "Hi {name}, great to meet you! I'm Vanya, and I'll be your interviewer today. "
+    "Hi {name}, great to meet you! I'm {interviewer}, and I'll be your interviewer today. "
     "We'll start with a short coding exercise, then chat through your background. "
     "But first, to break the ice — tell me a little about yourself."
 )
@@ -323,6 +363,7 @@ TRANSITION_TO_QUESTIONS = (
 async def _speak_line(ws: WebSocket, session: InterviewSession, text: str):
     # speak a line without listening afterwards (used for transitions/segues)
     session.state = SessionState.SPEAKING
+    await _caption(ws, "interviewer", text)
     wav = await run_in_executor(session.tts.synthesize, text)
     await _send_audio(ws, session, wav)
 
@@ -390,6 +431,7 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
     })
 
     # speak the intro (no listening — the candidate types, doesn't talk yet)
+    await _caption(ws, "interviewer", cq.spoken_intro)
     intro_wav = await run_in_executor(session.tts.synthesize, cq.spoken_intro)
     await _send_audio(ws, session, intro_wav)
 
@@ -452,7 +494,7 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
     # grounded spoken follow-up about their code, then capture the voice answer
     followup_text = await _speak_stream(
         ws, session,
-        lambda: generate_code_followup_stream(cq, last_lang, last_code, last_output, session.llm),
+        lambda: generate_code_followup_stream(cq, last_lang, last_code, last_output, session.llm, _interviewer_persona(session)),
     )
     logger.info(f"[{sid}] coding follow-up: {followup_text!r}")
     await ws.send_json({"type": "listening", "turn": turn})
@@ -500,7 +542,7 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
         logger.info(f"[{sid}] (bg) parsing resume: {session.resume_path}")
         resume = await run_in_executor(parse_resume, session.resume_path, session.llm)
         logger.info(f"[{sid}] (bg) generating first question...")
-        first_q, _ = await run_in_executor(generate_adaptive_question, resume, [], session.llm)
+        first_q, _ = await run_in_executor(generate_adaptive_question, resume, [], session.llm, _interviewer_persona(session))
         first_wav = await run_in_executor(session.tts.synthesize, first_q.text)
         logger.info(f"[{sid}] (bg) first question audio ready")
         return resume, first_q, first_wav
@@ -517,7 +559,9 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
     try:
         # greet and capture the introduction (overlaps with prep_task)
         logger.info(f"[{sid}] === introduction ===")
-        greeting = GREETING.format(name=session.candidate_name)
+        greeting = GREETING.format(
+            name=session.candidate_name, interviewer=_interviewer_name(session)
+        )
         await _ask_question(ws, session, Question(text=greeting, topic="introduction"), turn=turn)
         intro_audio = await _capture_answer(ws, session)
         await queue.put((turn, None, intro_audio, None, None))  # warm-up: transcribe, don't score
@@ -568,7 +612,7 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
             # to it — struggled → easier/pivot, nailed it → deeper/harder.
             if idx < max_q:
                 question, mastery = await run_in_executor(
-                    generate_adaptive_question, resume, history, session.llm
+                    generate_adaptive_question, resume, history, session.llm, _interviewer_persona(session)
                 )
                 history[-1].mastery = mastery
                 first_wav = None
@@ -618,9 +662,33 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
 
     # report generation also overlaps with the farewell playback on the client
     logger.info(f"[{sid}] generating report from {len(ordered)} evals...")
-    report = await run_in_executor(generate_report, session.candidate_name, ordered, session.llm)
+    avg = sum(e.score for e in ordered) / len(ordered)
+    try:
+        report = await run_in_executor(generate_report, session.candidate_name, ordered, session.llm)
+        recommendation = report.recommendation
+        markdown = to_markdown(report)
+    except Exception as exc:
+        # the summary LLM call failed/timed out — still give the candidate a
+        # report (per-question breakdown + a score-based recommendation) so the
+        # whole interview isn't wasted.
+        logger.warning(f"[{sid}] report summary failed ({exc!r}); using fallback")
+        recommendation = "STRONG_HIRE" if avg >= 8 else ("LEAN_HIRE" if avg >= 6 else "NO_HIRE")
+        fallback = InterviewReport(
+            candidate_name=session.candidate_name,
+            evaluations=ordered,
+            overall_summary=(f"Automated summary unavailable this time. Average score "
+                             f"{avg:.1f}/10 — see the per-question breakdown above."),
+            recommendation=recommendation,
+        )
+        markdown = to_markdown(fallback)
 
-    await ws.send_json({"type": "report", "markdown": to_markdown(report)})
+    # persist to history so the candidate can revisit it later
+    try:
+        history_store.save_interview(session.candidate_name, recommendation, avg, markdown)
+    except Exception as exc:
+        logger.warning(f"[{sid}] failed to save interview history: {exc!r}")
+
+    await ws.send_json({"type": "report", "markdown": markdown})
     logger.info(f"[{sid}] interview complete, report sent")
 
 

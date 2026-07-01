@@ -32,6 +32,7 @@ class InterviewSession:
     vad: LocalVADModel = field(init=False)
     state: SessionState = SessionState.CREATED
     candidate_name: str = ""
+    voice: str = ""            # TTS voice chosen for this interview (random)
     questions: list[Question] = field(default_factory=list)
     evals: list[AnswerEval] = field(default_factory=list)
     audio_buf: bytearray = field(default_factory=bytearray)

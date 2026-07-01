@@ -13,6 +13,7 @@ class AnswerEval:
     score: int
     feedback: str
     evidence: str = ""
+    ideal_answer: str = ""   # what a strong answer/approach looks like
 
 
 @dataclass
@@ -28,6 +29,7 @@ class _EvalSchema(BaseModel):
     score: int
     feedback: str
     evidence: str
+    ideal_answer: str
 
 
 class _ReportSchema(BaseModel):
@@ -42,10 +44,15 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
     """
     system = """
         You are an expert answer evaluator. Given the question, topic and the answer
-        evaluate the answer based on the question. Give the score, your feedback, and
-        the evidence: a short VERBATIM quote from the candidate's answer that best
-        justifies the score. Quote the answer exactly — do not paraphrase or invent
-        text. If the answer is empty or off-topic, return an empty evidence string.
+        evaluate the answer based on the question. Give the score, your feedback, the
+        evidence, and an ideal_answer.
+        - evidence: a short VERBATIM quote from the candidate's answer that best
+          justifies the score. Quote the answer exactly — do not paraphrase or invent
+          text. If the answer is empty or off-topic, return an empty evidence string.
+        - ideal_answer: 2-3 sentences describing what a strong answer to THIS question
+          would cover — the key points, structure, or concrete examples the candidate
+          could have given. This is teaching material, so write it even for good
+          answers (what would make it a 10).
 
         Scoring guidance (be lenient and encouraging):
         - If the answer is relevant to the question and on-topic, the score must be
@@ -61,7 +68,7 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
         - Start your response with { and end with }
         - Do NOT wrap in markdown or code fences
         - Do NOT add any explanation before or after the JSON
-        Format: {"score": 0-10, "feedback": your feedback, "evidence": verbatim quote from the answer}
+        Format: {"score": 0-10, "feedback": your feedback, "evidence": verbatim quote from the answer, "ideal_answer": what a strong answer would cover}
 
         Below is an example of expected output. DO NOT parrot it in the actual output
 
@@ -75,12 +82,16 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
             Output:
             {"score": 8, "feedback": "Strong answer with a concrete metric and clear
             technical solution. Could mention trade-offs considered.", "evidence":
-            "I reduced API latency by 40% by caching frequent DB queries with Redis."}
+            "I reduced API latency by 40% by caching frequent DB queries with Redis.",
+            "ideal_answer": "A strong answer names the bottleneck and how it was found
+            (profiling/metrics), the fix and why it worked, the measured impact, and a
+            trade-off considered such as cache invalidation or staleness."}
     """
 
-    response = llm.complete(prompt = prompt, system = system, response_schema = _EvalSchema)
+    # temperature=0.0 → the same answer scores the same on every run
+    response = llm.complete(prompt = prompt, system = system, response_schema = _EvalSchema, temperature = 0.0)
     data = json.loads(response)
-    return AnswerEval(question=question.text, topic=question.topic, answer=answer, score=data['score'], feedback=data['feedback'], evidence=data.get('evidence', ''))
+    return AnswerEval(question=question.text, topic=question.topic, answer=answer, score=data['score'], feedback=data['feedback'], evidence=data.get('evidence', ''), ideal_answer=data.get('ideal_answer', ''))
 
 
 def evaluate_code(title: str, problem: str, language: str, code: str,
@@ -120,10 +131,14 @@ def evaluate_code(title: str, problem: str, language: str, code: str,
         Do not inflate the score for failing code just because the explanation sounds
         plausible. Correctness is shown by the automated test results.
 
+        Also return ideal_answer: 2-3 sentences describing an optimal, clean approach
+        to THIS problem (the key idea and its time/space complexity), so the candidate
+        can learn what a strong solution looks like — even if theirs already passed.
+
         Output rules (strict):
         - Return ONLY a JSON object, starting with { and ending with }
         - No markdown, no code fences, no text before or after
-        Format: {"score": 0-10, "feedback": "...", "evidence": "short note citing the test outcome or a specific part of the code"}
+        Format: {"score": 0-10, "feedback": "...", "evidence": "short note citing the test outcome or a specific part of the code", "ideal_answer": "the optimal approach + complexity"}
     """
     prompt = f"""
         Problem: {title}
@@ -138,23 +153,25 @@ def evaluate_code(title: str, problem: str, language: str, code: str,
         Interviewer's follow-up question: {followup_q}
         Candidate's spoken answer: {followup_a}
     """
-    response = llm.complete(prompt=prompt, system=system, response_schema=_EvalSchema)
+    response = llm.complete(prompt=prompt, system=system, response_schema=_EvalSchema, temperature=0.0)
     data = json.loads(response)
     # report shows only what the candidate could see; hidden cases stay out of it
     answer = f"[{language}] solution — {vpass}/{vtotal} tests passed.\nExplanation: {followup_a}"
     return AnswerEval(question=f"{title} (coding)", topic="coding", answer=answer,
-                      score=data["score"], feedback=data["feedback"], evidence=data.get("evidence", ""))
+                      score=data["score"], feedback=data["feedback"], evidence=data.get("evidence", ""),
+                      ideal_answer=data.get("ideal_answer", ""))
 
 
 def evals_to_string(evals: List[AnswerEval]) -> str:
     answer = []
     for i, eval in enumerate(evals):
         evidence_line = f"\n        - **Evidence:** \"{eval.evidence}\"" if eval.evidence else ""
+        ideal_line = f"\n        - **Model answer:** {eval.ideal_answer}" if eval.ideal_answer else ""
         curr = f"""
         ### Q{i+1}: {eval.question} (Topic: {eval.topic})
         - **Answer:** {eval.answer}
         - **Score:** {eval.score}
-        - **Feedback:** {eval.feedback}{evidence_line}
+        - **Feedback:** {eval.feedback}{evidence_line}{ideal_line}
         """
         answer.append(curr)
     return "\n".join(answer)
@@ -191,7 +208,7 @@ def generate_report(candidate_name: str, evals: List[AnswerEval], llm: Any) -> I
     """
     
 
-    response = llm.complete(prompt = prompt, system = system, response_schema = _ReportSchema)
+    response = llm.complete(prompt = prompt, system = system, response_schema = _ReportSchema, temperature = 0.0)
     data = json.loads(response)
     return InterviewReport(candidate_name = candidate_name, evaluations=evals, overall_summary=data['overall_summary'], recommendation=data['recommendation'])
 

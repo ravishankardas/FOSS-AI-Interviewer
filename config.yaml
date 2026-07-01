@@ -1,9 +1,9 @@
 interview:
   answer_time_limit: 120
   follow_up_enabled: true
-  max_questions: 2
+  max_questions: 1
   coding_enabled: true
-  coding_questions: 1
+  coding_questions: 0
   code_time_limit: 300
 llm:
   model_name: gemini-2.5-flash
@@ -22,8 +22,16 @@ stt:
   model_path: medium
 tts:
   speed: 1
-  voice: en_US-lessac-medium
+  # active voice — change this to any key under `voices` below, then make sure
+  # its model is downloaded: python -m scripts.download_voices
+  voice: en_US-amy-medium
   model_path: models/en/en_US/lessac/medium/en_US-lessac-medium.onnx
+  voices:
+    en_US-lessac-medium: models/en/en_US/lessac/medium/en_US-lessac-medium.onnx      # neutral (default)
+    en_US-amy-medium: models/en/en_US/amy/medium/en_US-amy-medium.onnx               # US female, warm
+    en_US-ryan-medium: models/en/en_US/ryan/medium/en_US-ryan-medium.onnx            # US male, professional
+    en_US-hfc_female-medium: models/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx  # US female, crisp
+    en_GB-alan-medium: models/en/en_GB/alan/medium/en_GB-alan-medium.onnx            # GB male, measured
 vad:
   chunk_size: 512
   min_speech_duration_ms: 250
