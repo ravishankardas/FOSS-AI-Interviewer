@@ -48,6 +48,8 @@ class InterviewConfig:
     max_questions: int = 2
     answer_time_limit: int = 120
     follow_up_enabled: bool = True
+    barge_in: bool = True              # let the candidate interrupt the interviewer's TTS
+    greeting_enabled: bool = True      # speak the greeting + capture a warm-up intro
     coding_enabled: bool = True
     coding_questions: int = 1          # how many coding problems to pose
     code_time_limit: int = 300         # cap on the whole coding turn (seconds)

@@ -96,7 +96,9 @@ def evaluate_answer(question: Question, answer: str, llm: Any) -> AnswerEval:
 
 def evaluate_code(title: str, problem: str, language: str, code: str,
                   visible_results: list, hidden_results: list,
-                  followup_q: str, followup_a: str, llm: Any) -> AnswerEval:
+                  followup_q: str, followup_a: str, llm: Any,
+                  dialogue: str = "", optimal: dict = None,
+                  optimize_asked: bool = False) -> AnswerEval:
     # dedicated coding grader: correctness-first, not bound by the lenient verbal
     # rubric. Judges the problem + actual code + test outcome + spoken explanation.
     #
@@ -118,6 +120,13 @@ def evaluate_code(title: str, problem: str, language: str, code: str,
     else:
         test_block = "No automated tests available."
 
+    optimal = optimal or {}
+    _optimal_text = (
+        f"time {optimal.get('time', '?')}, space {optimal.get('space', '?')}"
+        if optimal else "not specified"
+    )
+    _optimize_asked_text = "yes" if optimize_asked else "no"
+
     system = """
         You are an expert technical interviewer grading a candidate's solution to a
         coding problem. Score from 0 to 10 based primarily on CORRECTNESS, then on
@@ -130,6 +139,20 @@ def evaluate_code(title: str, problem: str, language: str, code: str,
         - Fails most tests or fundamentally wrong: 0-2
         Do not inflate the score for failing code just because the explanation sounds
         plausible. Correctness is shown by the automated test results.
+
+        Interviewer assistance also affects the score. Below is the spoken exchange
+        during the round; judge how much help the candidate needed. MORE help = LOWER
+        score:
+        - Solved it on their own with little or no help: no penalty.
+        - Needed a nudge or two: small reduction.
+        - Needed repeated or increasingly direct hints, or the approach spelled out:
+          significant reduction — a solution they largely couldn't reach on their own
+          should not score 8-10.
+        Ignore small talk and clarifying questions about the problem; only count real
+        hints/guidance toward the solution.
+        If the candidate was asked to optimize a working solution, judge efficiency
+        against the optimal complexity given below: improving it is a plus; leaving
+        it clearly sub-optimal after being asked should temper the score.
 
         Also return ideal_answer: 2-3 sentences describing an optimal, clean approach
         to THIS problem (the key idea and its time/space complexity), so the candidate
@@ -152,6 +175,12 @@ def evaluate_code(title: str, problem: str, language: str, code: str,
 
         Interviewer's follow-up question: {followup_q}
         Candidate's spoken answer: {followup_a}
+
+        Spoken exchange during the round:
+        {dialogue or '(the candidate did not speak during coding)'}
+
+        Optimal complexity for this problem: {_optimal_text}
+        Was the candidate asked to optimize their solution? {_optimize_asked_text}
     """
     response = llm.complete(prompt=prompt, system=system, response_schema=_EvalSchema, temperature=0.0)
     data = json.loads(response)

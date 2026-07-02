@@ -7,7 +7,12 @@ from ai_interviewer.question_gen import (
     Question,
     Turn,
     generate_adaptive_question,
+    generate_adaptive_question_stream,
     generate_followup_stream,
+    generate_interruption_response_stream,
+    generate_coding_reply_stream,
+    assess_optimizability,
+    generate_optimize_prompt_stream,
     generate_code_followup_stream,
     pick_coding_questions,
 )
@@ -163,11 +168,15 @@ async def _wait_for_start(ws: WebSocket, session: InterviewSession):
     session.state = SessionState.STARTED
     logger.info(f"[{session.session_id[:8]}] interview started for '{session.candidate_name}'")
 
-async def _ask_question(ws: WebSocket, session: InterviewSession, question: Question, wav_bytes: bytes = None, turn: int = None):
+async def _ask_question(ws: WebSocket, session: InterviewSession, question: Question, wav_bytes: bytes = None, turn: int = None, barge: bool = False):
     # set state = SPEAKING
     # synthesize TTS in executor (unless pre-rendered wav_bytes provided)
     # send wav bytes as binary
     # send {"type": "listening", "turn": turn} json
+    #
+    # barge=True tells the client to start streaming mic frames immediately
+    # (during playback) instead of waiting for the TTS to finish, so the server
+    # can detect an interruption via VAD in _capture_answer.
 
     session.state = SessionState.SPEAKING
     logger.info(f"[{session.session_id[:8]}] asking: {question.text}")
@@ -176,14 +185,20 @@ async def _ask_question(ws: WebSocket, session: InterviewSession, question: Ques
         wav_bytes = await run_in_executor(session.tts.synthesize, question.text)
     await _send_audio(ws, session, wav_bytes)
 
-    await ws.send_json({"type": "listening", "turn": turn})
+    await ws.send_json({"type": "listening", "turn": turn, "barge": barge})
 
-async def _capture_answer(ws: WebSocket, session: InterviewSession):
+async def _capture_answer(ws: WebSocket, session: InterviewSession, barge: bool = False):
     # capture the spoken answer via VAD and return the raw audio (no transcription).
     # transcription happens later in the background STT worker so the candidate
     # never waits on Whisper between questions.
+    #
+    # barge=True: the client is already streaming mic frames while the bot's TTS
+    # is still playing. If the candidate starts speaking before speaking_until
+    # (the bot hasn't finished), tell the client to cut the playback — that's an
+    # interruption, and we keep the interrupting speech as the start of the answer.
     sid = session.session_id[:8]
     session.state = SessionState.LISTENING
+    barged = False
     logger.info(f"[{sid}] listening for answer...")
     session.vad.reset()
     audio_buf = bytearray()
@@ -253,6 +268,12 @@ async def _capture_answer(ws: WebSocket, session: InterviewSession):
             if result is not None:
                 if "start" in result:
                     speech_started = True
+                    # interruption: the candidate started talking while the bot's
+                    # audio is still playing — cut it so we're not talking over them
+                    if barge and not barged and loop.time() < session.speaking_until:
+                        await ws.send_json({"type": "barge_in"})
+                        barged = True
+                        logger.info(f"[{sid}] barge-in — candidate interrupted")
                 if "end" in result and speech_started:
                     speech_ended = True
 
@@ -266,9 +287,48 @@ async def _capture_answer(ws: WebSocket, session: InterviewSession):
 
     if not speech_samples:
         logger.info(f"[{sid}] no speech captured")
-        return None
+        return None, barged
 
-    return np.concatenate(speech_samples)
+    return np.concatenate(speech_samples), barged
+
+
+async def _ask_and_capture(ws: WebSocket, session: InterviewSession, question: Question = None,
+                           turn: int = None, barge: bool = False, wav_bytes: bytes = None,
+                           make_gen=None, topic: str = "adaptive"):
+    # ask a question and capture the spoken answer, handling a barge-in
+    # conversationally: if the candidate cuts the interviewer off, react to what
+    # they blurted (finishing the thought if they were confused) instead of
+    # scoring it, then listen again for the real answer.
+    #
+    # if `make_gen` is given, the question is STREAMED (tokens -> sentence -> TTS)
+    # so the first sentence plays while the rest is still being generated; the
+    # spoken text becomes the Question. Otherwise `question` is synthesized whole.
+    # Returns (answer_audio, question).
+    sid = session.session_id[:8]
+    if make_gen is not None:
+        session.state = SessionState.SPEAKING
+        full = await _speak_stream(ws, session, make_gen)
+        question = Question(text=full, topic=topic)
+        logger.info(f"[{sid}] asked (streamed): {full!r}")
+        await ws.send_json({"type": "listening", "turn": turn, "barge": barge})
+    else:
+        await _ask_question(ws, session, question, wav_bytes=wav_bytes, turn=turn, barge=barge)
+    audio, barged = await _capture_answer(ws, session, barge=barge)
+
+    if barged and audio is not None:
+        interjection = await run_in_executor(session.stt.transcribe, audio)
+        logger.info(f"[{sid}] interruption: {interjection!r}")
+        await _caption(ws, "you", interjection)
+        await _speak_stream(
+            ws, session,
+            lambda: generate_interruption_response_stream(
+                question, interjection, session.llm, _interviewer_persona(session)
+            ),
+        )
+        await ws.send_json({"type": "listening", "turn": turn, "barge": barge})
+        audio, _ = await _capture_answer(ws, session, barge=barge)
+
+    return audio, question
 
 
 async def _stt_worker(ws: WebSocket, session: InterviewSession, queue: asyncio.Queue, evals: dict):
@@ -345,9 +405,13 @@ def _interviewer_persona(session) -> str:
 
 GREETING = (
     "Hi {name}, great to meet you! I'm {interviewer}, and I'll be your interviewer today. "
-    "We'll start with a short coding exercise, then chat through your background. "
+    "{plan} "
     "But first, to break the ice — tell me a little about yourself."
 )
+# the middle sentence sets expectations for the interview, so it has to match
+# whether a coding round will actually run (see _coding_on)
+GREETING_PLAN_CODING = "We'll start with a short coding exercise, then chat through your background."
+GREETING_PLAN_NO_CODING = "We'll chat through your background and experience."
 
 FAREWELL = "Thank you for the interview, {name}. Best of luck with your results."
 
@@ -437,6 +501,42 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
 
     last_lang, last_code, last_output = "python", "", ""
 
+    # the interviewer listens continuously while the candidate codes: mic frames
+    # arrive as binary and are fed to Silero VAD; a completed utterance (a spoken
+    # question / hint request / thinking-aloud) is transcribed and, from stage 2,
+    # answered. We ignore frames while the interviewer is speaking (echo) and
+    # reset the VAD once it finishes, mirroring the nudge/barge pattern.
+    session.vad.reset()
+    CHUNK_BYTES = session.cfg.vad.chunk_size * 4
+    vad_buf = bytearray()
+    utt_samples: list[np.ndarray] = []
+    speaking = False          # candidate mid-utterance (VAD saw start, not end)
+    was_bot_speaking = False  # interviewer was talking on the previous frame
+    convo: list[str] = []     # spoken exchange this round (drives hints + scoring)
+    optimize_asked = False    # asked them once to improve a working-but-slow solution
+
+    def _feed_vad(pcm: bytes):
+        # push mic bytes through the VAD; return the utterance samples on speech-end
+        nonlocal vad_buf, utt_samples, speaking
+        vad_buf.extend(pcm)
+        done = None
+        while len(vad_buf) >= CHUNK_BYTES:
+            raw = vad_buf[:CHUNK_BYTES]
+            vad_buf = vad_buf[CHUNK_BYTES:]
+            chunk = np.frombuffer(raw, np.float32).copy()
+            result = session.vad.iterator(torch.from_numpy(chunk), return_seconds=False)
+            if result is not None:
+                if "start" in result:
+                    speaking = True
+                if "end" in result and speaking:
+                    speaking = False
+                    if utt_samples:
+                        done = np.concatenate(utt_samples)
+                    utt_samples = []
+            if speaking:
+                utt_samples.append(chunk)
+        return done
+
     loop = asyncio.get_event_loop()
     deadline = loop.time() + session.cfg.interview.code_time_limit
     while True:
@@ -450,12 +550,49 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
             break
         if msg["type"] == "websocket.disconnect":
             raise WebSocketDisconnect(msg.get("code", 1000))
+
         if msg.get("text") is None:
-            continue  # ignore stray binary frames during coding
+            # binary = mic audio. Listen continuously, but ignore frames while the
+            # interviewer is speaking so its own voice (echo) can't trigger the VAD.
+            if msg.get("bytes") is None:
+                continue
+            if loop.time() < session.speaking_until:
+                was_bot_speaking = True
+                continue
+            if was_bot_speaking:
+                # interviewer just finished — drop the echo-tainted tail + re-arm VAD
+                vad_buf.clear()
+                utt_samples.clear()
+                speaking = False
+                session.vad.reset()
+                was_bot_speaking = False
+            utterance = _feed_vad(msg["bytes"])
+            if utterance is not None:
+                text = await run_in_executor(session.stt.transcribe, utterance)
+                if text.strip():
+                    logger.info(f"[{sid}] (coding) candidate said: {text!r}")
+                    await _caption(ws, "you", text)
+                    # one context-aware streaming reply — no pre-classify round-trip;
+                    # the conversation so far drives guarded clarify / graduated hints
+                    history = "\n".join(convo[-8:])
+                    convo.append(f"Candidate: {text}")
+                    reply = await _speak_stream(
+                        ws, session,
+                        lambda t=text, h=history: generate_coding_reply_stream(
+                            cq, last_lang, last_code, last_output, t, h,
+                            session.llm, _interviewer_persona(session),
+                        ),
+                    )
+                    convo.append(f"Interviewer: {reply}")
+            continue
 
         data = json.loads(msg["text"])
         mtype = data.get("type")
-        if mtype == "run_code":
+        if mtype == "code_state":
+            # live editor sync — keeps the interviewer's view of the screen current
+            last_lang = data.get("language", last_lang)
+            last_code = data.get("code", last_code)
+        elif mtype == "run_code":
             last_lang = data.get("language", "python")
             last_code = data.get("code", "")
             result = await run_in_executor(session.executor.run, last_lang, last_code)
@@ -485,6 +622,27 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
             last_lang = data.get("language", last_lang)
             last_code = data.get("code", last_code)
             logger.info(f"[{sid}] code submitted ({last_lang}, {len(last_code)} chars)")
+            # one optimization round: if the working solution isn't optimal, ask the
+            # candidate to improve it and re-open the editor for a refined resubmit
+            if not optimize_asked and last_code.strip():
+                can_improve = await run_in_executor(
+                    assess_optimizability, cq, last_lang, last_code, session.llm
+                )
+                if can_improve:
+                    optimize_asked = True
+                    deadline = loop.time() + session.cfg.interview.code_time_limit  # fresh time to refine
+                    logger.info(f"[{sid}] (coding) solution sub-optimal — asking to optimize")
+                    await ws.send_json({
+                        "type": "optimize_prompt",
+                        "time_limit": session.cfg.interview.code_time_limit,
+                    })
+                    await _speak_stream(
+                        ws, session,
+                        lambda: generate_optimize_prompt_stream(
+                            cq, last_lang, last_code, session.llm, _interviewer_persona(session)
+                        ),
+                    )
+                    continue  # back to the loop; they refine and submit again
             break
 
     if not last_code.strip():
@@ -498,7 +656,7 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
     )
     logger.info(f"[{sid}] coding follow-up: {followup_text!r}")
     await ws.send_json({"type": "listening", "turn": turn})
-    audio = await _capture_answer(ws, session)
+    audio, _ = await _capture_answer(ws, session)
 
     # run the FULL suite (visible + hidden) against the submitted code as the
     # authoritative correctness signal for scoring — hidden cases never reached
@@ -522,9 +680,11 @@ async def _coding_turn(ws: WebSocket, session: InterviewSession, cq, queue: asyn
     # grade with the dedicated coding rubric: problem + code + test outcome +
     # the follow-up Q and the candidate's spoken answer (filled in by the worker)
     def grader(answer_text, _cq=cq, _lang=last_lang, _code=last_code,
-               _vis=visible_results, _hid=hidden_results, _fq=followup_text):
+               _vis=visible_results, _hid=hidden_results, _fq=followup_text,
+               _dlg="\n".join(convo), _opt=cq.optimal, _oa=optimize_asked):
         return evaluate_code(_cq.title, _cq.prompt, _lang, _code, _vis, _hid, _fq,
-                             answer_text, session.llm)
+                             answer_text, session.llm, dialogue=_dlg,
+                             optimal=_opt, optimize_asked=_oa)
 
     await queue.put((turn, None, audio, None, grader))
     return turn + 1, True
@@ -557,21 +717,36 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
     turn = 0
 
     try:
-        # greet and capture the introduction (overlaps with prep_task)
-        logger.info(f"[{sid}] === introduction ===")
-        greeting = GREETING.format(
-            name=session.candidate_name, interviewer=_interviewer_name(session)
+        # will a coding round actually run? gates both the greeting's promise and
+        # the round itself, so the two can't contradict each other
+        coding_on = (
+            session.cfg.interview.coding_enabled
+            and session.executor is not None
+            and session.cfg.interview.coding_questions > 0
         )
-        await _ask_question(ws, session, Question(text=greeting, topic="introduction"), turn=turn)
-        intro_audio = await _capture_answer(ws, session)
-        await queue.put((turn, None, intro_audio, None, None))  # warm-up: transcribe, don't score
-        turn += 1
+
+        # greet and capture the introduction (overlaps with prep_task)
+        if session.cfg.interview.greeting_enabled:
+            logger.info(f"[{sid}] === introduction ===")
+            greeting = GREETING.format(
+                name=session.candidate_name,
+                interviewer=_interviewer_name(session),
+                plan=GREETING_PLAN_CODING if coding_on else GREETING_PLAN_NO_CODING,
+            )
+            intro_audio, _ = await _ask_and_capture(
+                ws, session, Question(text=greeting, topic="introduction"),
+                turn=turn, barge=session.cfg.interview.barge_in,
+            )
+            await queue.put((turn, None, intro_audio, None, None))  # warm-up: transcribe, don't score
+            turn += 1
+        else:
+            logger.info(f"[{sid}] greeting disabled — skipping introduction")
 
         answered = False
 
         # coding round first — it runs while the resume parse + question
         # generation (prep_task) finish in the background, so that time isn't idle
-        if session.cfg.interview.coding_enabled and session.executor is not None:
+        if coding_on:
             for cq in pick_coding_questions(session.cfg.interview.coding_questions):
                 logger.info(f"[{sid}] === coding: {cq.title} ===")
                 turn, coded = await _coding_turn(ws, session, cq, queue, turn)
@@ -587,16 +762,30 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
             await _speak_line(ws, session, TRANSITION_TO_QUESTIONS)
 
         max_q = session.cfg.interview.max_questions
+        barge = session.cfg.interview.barge_in
         history: list[Turn] = []
         for idx in range(1, max_q + 1):
-            logger.info(f"[{sid}] === question {idx}/{max_q} [{question.topic}] ===")
-            await _ask_question(ws, session, question, wav_bytes=first_wav if idx == 1 else None, turn=turn)
-            audio = await _capture_answer(ws, session)
+            logger.info(f"[{sid}] === question {idx}/{max_q} ===")
+            if idx == 1:
+                # Q1 was pre-generated + pre-synthesized during prep (masked by the
+                # coding round / résumé parse), so just play it
+                audio, question = await _ask_and_capture(
+                    ws, session, question, turn=turn, barge=barge, wav_bytes=first_wav,
+                )
+            else:
+                # Q2+: stream the adaptive question (tokens -> sentence -> TTS) so it
+                # starts speaking almost immediately, grounded in the exchange so far
+                audio, question = await _ask_and_capture(
+                    ws, session, turn=turn, barge=barge,
+                    make_gen=lambda: generate_adaptive_question_stream(
+                        resume, history, session.llm, _interviewer_persona(session)
+                    ),
+                )
             if audio is not None:
                 answered = True
 
-            # transcribe on the critical path: the adaptive picker needs the
-            # answer to choose the next question. Groq is near-instant.
+            # transcribe on the critical path so the next adaptive question can see
+            # this answer. Groq is near-instant.
             answer_text = ""
             if audio is not None:
                 answer_text = await run_in_executor(session.stt.transcribe, audio)
@@ -606,17 +795,6 @@ async def _run_interview(ws: WebSocket, session: InterviewSession):
             await queue.put((turn, question, audio, answer_text, None))
             history.append(Turn(question=question, answer=answer_text))
             turn += 1
-
-            # adaptively pick the next question. The same call rates the answer
-            # just given (cheap steering signal) and targets the next question
-            # to it — struggled → easier/pivot, nailed it → deeper/harder.
-            if idx < max_q:
-                question, mastery = await run_in_executor(
-                    generate_adaptive_question, resume, history, session.llm, _interviewer_persona(session)
-                )
-                history[-1].mastery = mastery
-                first_wav = None
-                logger.info(f"[{sid}] last answer mastery {mastery}/10 → next [{question.topic}]")
 
         # speak the farewell now so its playback masks the final transcription,
         # evaluation, and report generation that still have to finish

@@ -35,6 +35,8 @@ let workletNode = null;
 let analyser = null;        // taps TTS playback for the lamp
 let streaming = false;      // send mic frames only while LISTENING
 let playbackChain = Promise.resolve();
+let currentSource = null;   // the AudioBufferSourceNode currently playing (for barge-in)
+let bargeAborted = false;   // set when the candidate interrupts; skips queued TTS
 let ws = null;
 let candidateName = "Candidate";
 let pendingReport = null;    // report markdown, shown when "View report" is clicked
@@ -166,13 +168,17 @@ function playWav(arrayBuffer) {
   playbackChain = playbackChain.then(
     () =>
       new Promise((resolve) => {
+        // candidate barged in: drop this and any further queued clips
+        if (bargeAborted) { resolve(); return; }
         audioCtx.decodeAudioData(
           arrayBuffer,
           (buffer) => {
+            if (bargeAborted) { resolve(); return; }
             const src = audioCtx.createBufferSource();
             src.buffer = buffer;
             src.connect(analyser);
             analyser.connect(audioCtx.destination);
+            currentSource = src;
             const data = new Float32Array(analyser.fftSize);
             const meter = () => {
               if (src.__done) return;
@@ -182,7 +188,11 @@ function playWav(arrayBuffer) {
               targetLevel = Math.max(targetLevel, Math.sqrt(s / data.length));
               requestAnimationFrame(meter);
             };
-            src.onended = () => { src.__done = true; resolve(); };
+            src.onended = () => {
+              src.__done = true;
+              if (currentSource === src) currentSource = null;
+              resolve();
+            };
             src.start();
             meter();
           },
@@ -191,6 +201,17 @@ function playWav(arrayBuffer) {
       })
   );
   return playbackChain;
+}
+
+// candidate interrupted the interviewer — stop the clip that's playing and let
+// the chain drain past anything still queued for this utterance.
+function abortPlayback() {
+  bargeAborted = true;
+  if (currentSource) {
+    try { currentSource.stop(); } catch (_) {}
+    currentSource = null;
+  }
+  waveActive(false);
 }
 
 // ── safe-ish markdown ─────────────────────────────────
@@ -287,6 +308,7 @@ function ensureEditor() {
       allTestsPassed = false;
       refreshSubmitBtn();
     }
+    scheduleCodeState();   // keep the interviewer's view of the code current
   });
   // pop completions as you type a word (not on every keystroke)
   editor.on("inputRead", (cm, change) => {
@@ -423,15 +445,37 @@ function showCoding(msg) {
   cm.setValue(starterFor(lang));
   setCodingBusy(false);
   startTimer(msg.time_limit || 300);
+  // the interviewer listens throughout the coding round — stream mic continuously
+  // so spoken questions / hint requests are heard (server VAD gates out its own TTS)
+  streaming = true;
+  sendCode("code_state");   // give the interviewer the starting screen state
   // CodeMirror needs a refresh once its container is visible
   setTimeout(() => cm.refresh(), 0);
 }
 
 function hideCoding() {
   codingActive = false;
+  streaming = false;        // stop listening; the verbal round re-enables per turn
   stopTimer();
   codingEl.hidden = true;
   interviewEl.hidden = false;
+}
+
+// re-open the editor for an optimization pass — keep the candidate's code, but
+// require them to re-verify tests before submitting the improved version
+function reopenCoding(timeLimit) {
+  codingActive = true;
+  interviewEl.hidden = true;
+  codingEl.hidden = false;
+  setLabel("Coding");
+  streaming = true;
+  allTestsPassed = false;
+  refreshSubmitBtn();
+  setCodingBusy(false);
+  codingOutputEl.textContent = "Refine your solution, re-run the tests, and submit again.";
+  codingOutputEl.className = "coding-output";
+  startTimer(timeLimit || 300);
+  setTimeout(() => editor && editor.refresh(), 0);
 }
 
 function renderRunResult(msg) {
@@ -464,6 +508,15 @@ function sendCode(type) {
       code: editor.getValue(),
     })
   );
+}
+
+// push the live editor contents to the interviewer, debounced so we send on a
+// typing pause rather than every keystroke
+let codeStateTimer = null;
+function scheduleCodeState() {
+  if (!codingActive) return;
+  clearTimeout(codeStateTimer);
+  codeStateTimer = setTimeout(() => sendCode("code_state"), 700);
 }
 
 // ── flow ──────────────────────────────────────────────
@@ -515,6 +568,9 @@ async function startInterview(e) {
 
     ws.onmessage = async (ev) => {
       if (ev.data instanceof ArrayBuffer) {
+        // a fresh interviewer utterance (we're between turns, not streaming) —
+        // clear any leftover barge-abort so this clip actually plays
+        if (!streaming) bargeAborted = false;
         setLabel("On air");
         setSpeaker("The interviewer is speaking.");
         waveActive(true);          // interviewer talking
@@ -530,11 +586,34 @@ async function startInterview(e) {
           setSpeaker(msg.message);
           break;
         case "listening":
-          await playbackChain;        // don't capture our own TTS
-          streaming = true;
-          waveActive(true);           // candidate talking
+          if (msg.barge) {
+            // barge-in enabled: start streaming mic frames NOW, while the
+            // interviewer is still talking, so the server can hear an interruption.
+            // Echo cancellation keeps our own TTS out of the frames.
+            streaming = true;
+            setLabel("Listening");
+            // keep the "interviewer is speaking" cue until playback finishes on
+            // its own; if it does (no interruption) prompt for the answer
+            playbackChain.then(() => {
+              if (streaming && !bargeAborted) {
+                waveActive(true);
+                setSpeaker("Your turn — answer out loud.");
+              }
+            });
+          } else {
+            await playbackChain;      // don't capture our own TTS
+            streaming = true;
+            waveActive(true);         // candidate talking
+            setLabel("Listening");
+            setSpeaker("Your turn — answer out loud.");
+          }
+          break;
+        case "barge_in":
+          // the server's VAD heard us start talking over the interviewer — cut it
+          abortPlayback();
+          waveActive(true);           // candidate talking now
           setLabel("Listening");
-          setSpeaker("Your turn — answer out loud.");
+          setSpeaker("Go ahead — I'm listening.");
           break;
         case "listening_stop":
           streaming = false;
@@ -552,6 +631,10 @@ async function startInterview(e) {
           break;
         case "coding_question":
           showCoding(msg);
+          break;
+        case "optimize_prompt":
+          // interviewer asked to improve a working-but-suboptimal solution
+          reopenCoding(msg.time_limit);
           break;
         case "run_result":
           renderRunResult(msg);

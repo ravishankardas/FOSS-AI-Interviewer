@@ -29,6 +29,7 @@ class CodingQuestion:
     starter: dict = field(default_factory=dict)  # {python, c++} input-reading scaffold
     tests: list = field(default_factory=list)  # [{name, stdin, expected}] visible cases
     hidden_tests: list = field(default_factory=list)  # never shown; scoring-only, anti-gaming
+    optimal: dict = field(default_factory=dict)  # {time, space} best complexity, for the optimize step
 
 
 # curated coding-question bank lives next to this module
@@ -198,6 +199,39 @@ def generate_adaptive_question(
     return question, mastery
 
 
+ADAPTIVE_STREAM_SYSTEM_PROMPT = """
+  You are an expert technical interviewer running a live, adaptive interview. You
+  are given the candidate's resume and the exchange so far. Silently judge how the
+  candidate handled their MOST RECENT answer, then ask the NEXT question, adapting:
+  - struggled -> make it easier, or pivot to a different area they may be stronger in
+  - did okay  -> probe a nearby area at a similar level
+  - nailed it -> go deeper or harder on what they know
+
+  Rules:
+  - Specific to THIS resume, never generic
+  - Do not repeat or closely echo any question already asked
+  - Conversational, as if spoken out loud; a single question
+  - First briefly acknowledge their previous answer in a few natural words, then ask.
+  Reply with ONLY what you'd say out loud — no labels, no JSON, no markdown.
+  """
+
+
+def generate_adaptive_question_stream(resume: ResumeData, history: List["Turn"],
+                                      llm: Any, persona: str = ""):
+    """Stream the next adaptive question's text token by token, so TTS can start on
+    the first sentence before the whole question is written. Same adaptation as
+    generate_adaptive_question, but plain-text/streamed — the model still steers off
+    the most recent answer internally; we just don't surface the mastery integer.
+    """
+    prompt = (
+        f"Resume:\n{_resume_to_text(resume)}\n\n"
+        f"Exchange so far:\n{_history_to_text(history)}"
+    )
+    system = (f"{persona}\n{ADAPTIVE_STREAM_SYSTEM_PROMPT}"
+              if persona else ADAPTIVE_STREAM_SYSTEM_PROMPT)
+    return llm.stream(prompt=prompt, system=system)
+
+
 def generate_followup(question: Question, answer: str, llm: Any) -> Question:
 
     system = f"""
@@ -239,6 +273,140 @@ def generate_followup_stream(question: Question, answer: str, llm: Any):
     prompt = f"""
         The original question was: {question.text} on the topic: {question.topic}.
         The candidate's answer is: {answer}
+    """
+    return llm.stream(prompt=prompt, system=system)
+
+
+def generate_interruption_response_stream(question: Question, interjection: str, llm: Any, persona: str = ""):
+    """Stream the interviewer's spoken reaction when the candidate barges in.
+
+    The interviewer was cut off partway through asking `question`; `interjection`
+    is what the candidate blurted over it. Respond naturally so the conversation
+    doesn't lose the thread — then the caller listens for the real answer.
+    """
+    system = (
+        (persona + " " if persona else "")
+        + "You are a warm, engaged technical interviewer in a real spoken "
+        "conversation. You were partway through asking a question when the "
+        "candidate cut in. In ONE or two natural sentences: acknowledge what they "
+        "said, and — if they sound confused or asked you to repeat — briefly "
+        "restate the gist of your question so it isn't lost; if they've already "
+        "started answering, just encourage them to keep going. Do NOT answer the "
+        "question yourself. Sound like a person talking, not a form. Reply with "
+        "ONLY what you'd say out loud — no labels, no markdown."
+    )
+    prompt = f"""
+        The question you were asking: {question.text} (topic: {question.topic})
+        The candidate interrupted you and said: {interjection}
+    """
+    return llm.stream(prompt=prompt, system=system)
+
+
+CODING_REPLY_SYSTEM = (
+    "You are a warm, engaged technical interviewer in a real spoken conversation, "
+    "watching the candidate solve a coding problem live. You can see their current "
+    "code, their latest program/test output, and the conversation so far. Respond "
+    "naturally to what they JUST said, choosing how in context:\n"
+    "- If they ask about the PROBLEM (constraints, input/output format, examples, "
+    "edge cases): answer, but stay GUARDED — never reveal or confirm the approach/"
+    "algorithm. If they're really fishing for how to solve it, gently deflect "
+    "('that part's for you to figure out') and restate what the problem asks.\n"
+    "- If they're STUCK or asking for a hint: give only as much as they need, and "
+    "ESCALATE GRADUALLY across the conversation — a gentle nudge first; get more "
+    "direct only if the history shows you've already nudged and they're still "
+    "stuck. Never give the full solution or write their code.\n"
+    "- If they ask about THEIR OWN code or an error they're seeing: look at their "
+    "code and output and point them toward the failing case or suspect logic as a "
+    "GUARDED nudge — don't rewrite it or hand them the fix.\n"
+    "- If they're just thinking out loud or making small talk: give a brief, warm "
+    "acknowledgement that keeps them going; don't reveal anything.\n"
+    "Keep it to one or two natural sentences, sound like a person talking, and "
+    "reply with ONLY what you'd say out loud — no labels, no markdown, no code."
+)
+
+
+def generate_coding_reply_stream(coding_q: "CodingQuestion", language: str, code: str,
+                                 output: str, utterance: str, history: str,
+                                 llm: Any, persona: str = ""):
+    """Stream the interviewer's spoken reply to something the candidate said while
+    coding — one call that decides in-context (guarded clarify / graduated hint /
+    debug nudge / encouragement) so there's no extra classify round-trip before
+    audio. `history` is the recent spoken exchange, which drives hint escalation.
+    """
+    system = (persona + " " if persona else "") + CODING_REPLY_SYSTEM
+    prompt = f"""
+        Problem: {coding_q.prompt}
+        Language: {language}
+        Their code so far:
+        {code or '(nothing written yet)'}
+        Latest program output:
+        {output or '(none)'}
+        Conversation so far:
+        {history or '(this is their first remark)'}
+        The candidate just said: {utterance}
+    """
+    return llm.stream(prompt=prompt, system=system)
+
+
+class _OptimalitySchema(BaseModel):
+    can_improve: bool
+    reason: str
+
+
+def assess_optimizability(coding_q: "CodingQuestion", language: str, code: str, llm: Any) -> bool:
+    """Judge whether the candidate's (working) solution is meaningfully worse than
+    the problem's optimal complexity and could realistically be improved. Only
+    returns True when there's worthwhile headroom, so we don't nag on already-
+    optimal solutions. No stored optimum → False (nothing to compare against).
+    """
+    optimal = coding_q.optimal or {}
+    if not optimal:
+        return False
+    system = (
+        "You assist a technical interviewer. Given a coding problem, its OPTIMAL "
+        "time and space complexity, and the candidate's WORKING solution, infer "
+        "the candidate's actual time and space complexity from their code and "
+        "decide whether it is meaningfully WORSE than optimal with worthwhile "
+        "headroom to improve (e.g. O(n^2) where O(n) is possible, or O(n) space "
+        "where O(1) is possible). If it already matches the optimal, or is only "
+        "trivially different, return can_improve=false. "
+        'Return ONLY JSON: {"can_improve": bool, "reason": "one short phrase"}.'
+    )
+    prompt = f"""
+        Problem: {coding_q.prompt}
+        Optimal complexity: time {optimal.get('time', '?')}, space {optimal.get('space', '?')}
+        Language: {language}
+        Candidate's solution:
+        {code}
+    """
+    try:
+        resp = llm.complete(prompt=prompt, system=system,
+                            response_schema=_OptimalitySchema, temperature=0.0)
+        return bool(json.loads(resp).get("can_improve", False))
+    except Exception:
+        return False
+
+
+def generate_optimize_prompt_stream(coding_q: "CodingQuestion", language: str, code: str, llm: Any, persona: str = ""):
+    """Stream the interviewer asking the candidate to improve a working-but-
+    suboptimal solution — nudging at which of time/space has headroom, without
+    handing over the optimal approach."""
+    optimal = coding_q.optimal or {}
+    system = (
+        (persona + " " if persona else "")
+        + "You are a warm, engaged technical interviewer. The candidate's solution "
+        "works and passes the tests, but it can be more efficient. In one or two "
+        "natural spoken sentences: briefly congratulate them that it works, then "
+        "ask them to improve its time or space complexity. Point at WHICH one has "
+        "room to improve, but do NOT reveal the optimal approach or write code. "
+        "Reply with ONLY what you'd say out loud — no labels, no markdown."
+    )
+    prompt = f"""
+        Problem: {coding_q.prompt}
+        Optimal complexity: time {optimal.get('time', '?')}, space {optimal.get('space', '?')}
+        Language: {language}
+        Their current solution:
+        {code}
     """
     return llm.stream(prompt=prompt, system=system)
 

@@ -25,7 +25,11 @@
         "stdin": "1 5 2 8\n9\n",
         "expected": "0 3"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(n)"
+    }
   },
   {
     "id": "valid-parentheses",
@@ -63,7 +67,11 @@
         "stdin": "{[]}\n",
         "expected": "true"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(n)"
+    }
   },
   {
     "id": "best-time-stock",
@@ -91,7 +99,11 @@
         "stdin": "1 2\n",
         "expected": "1"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "contains-duplicate",
@@ -119,7 +131,11 @@
         "stdin": "1 1 1 1\n",
         "expected": "true"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(n)"
+    }
   },
   {
     "id": "max-subarray",
@@ -152,7 +168,11 @@
         "stdin": "5 4 -1 7 8\n",
         "expected": "23"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "roman-to-integer",
@@ -242,7 +262,11 @@
         "stdin": "CXLIV\n",
         "expected": "144"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "length-of-last-word",
@@ -332,7 +356,11 @@
         "stdin": "c b \n",
         "expected": "1"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "longest-common-prefix",
@@ -422,7 +450,11 @@
         "stdin": "acbaa acb acc\n",
         "expected": "ac"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n*m)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "valid-palindrome",
@@ -512,7 +544,11 @@
         "stdin": "2.BbbB2\n",
         "expected": "true"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "is-subsequence",
@@ -602,7 +638,11 @@
         "stdin": "bc\nabcbcc\n",
         "expected": "true"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "majority-element",
@@ -692,14 +732,18 @@
         "stdin": "0 5 5\n",
         "expected": "5"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "jump-game",
     "title": "Jump Game",
     "difficulty": "medium",
     "prompt": "Read a line of space-separated non-negative integers. Each value is the max jump length from that position, starting at index 0. Print \"true\" if you can reach the last index, else \"false\".\n\nInput:\n  2 3 1 1 4\nOutput:\n  true",
-    "spoken_intro": "Here's a greedy one. Each number is how far you can jump from that spot, starting at the front. Can you reach the end? Print true or false.",
+    "spoken_intro": "Each number tells you how far you can jump forward from that spot, starting at the front of the list. Print true if you can reach the last index, or false if you can't.",
     "starter": {
       "python": "nums = list(map(int, input().split()))\n\n# TODO: print \"true\" if the last index is reachable\n",
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print \"true\" if the last index is reachable\n    return 0;\n}\n"
@@ -782,7 +826,11 @@
         "stdin": "1 0 3 2 2 2 3 4 4\n",
         "expected": "false"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "product-except-self",
@@ -872,7 +920,11 @@
         "stdin": "-3 -1 1 -3 1\n",
         "expected": "3 9 -9 3 -9"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "best-time-stock-ii",
@@ -962,14 +1014,18 @@
         "stdin": "7 6 2 4 12 8\n",
         "expected": "10"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "search-insert-position",
     "title": "Search Insert Position",
     "difficulty": "easy",
     "prompt": "Read a line of sorted, distinct space-separated integers, then a line with a target. Print the index (0-based) of the target, or the index where it would be inserted to keep the list sorted.\n\nInput:\n  1 3 5 6\n  5\nOutput:\n  2",
-    "spoken_intro": "You'll get a sorted list and a target. Print where the target is, or where it would go to keep things sorted. Binary search is the intended approach.",
+    "spoken_intro": "You'll get a sorted list of integers and a target. Print the index where the target is, or the index where it would go to keep the list sorted.",
     "starter": {
       "python": "nums = list(map(int, input().split()))\ntarget = int(input())\n\n# TODO: print the index of target, or its insert position\n",
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n    int target;\n    cin >> target;\n\n    // TODO: print the index of target, or its insert position\n    return 0;\n}\n"
@@ -1052,7 +1108,11 @@
         "stdin": "-4 -3 -1 13 19\n17\n",
         "expected": "4"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(log n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "add-binary",
@@ -1142,7 +1202,11 @@
         "stdin": "111111\n1101111\n",
         "expected": "10101110"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "plus-one",
@@ -1232,7 +1296,11 @@
         "stdin": "9 8 6 4 8 6\n",
         "expected": "9 8 6 4 8 7"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "valid-anagram",
@@ -1322,7 +1390,11 @@
         "stdin": "cbbaba\naccccc\n",
         "expected": "false"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "ransom-note",
@@ -1412,7 +1484,11 @@
         "stdin": "bacc\nbca\n",
         "expected": "false"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "word-pattern",
@@ -1502,7 +1578,11 @@
         "stdin": "a\nbird\n",
         "expected": "true"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(n)"
+    }
   },
   {
     "id": "summary-ranges",
@@ -1592,7 +1672,11 @@
         "stdin": "-4 -1 5 8 12 13 14\n",
         "expected": "-4 -1 5 8 12->14"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "climbing-stairs",
@@ -1682,7 +1766,11 @@
         "stdin": "27\n",
         "expected": "317811"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "single-number",
@@ -1772,14 +1860,18 @@
         "stdin": "5 22 16 5 11 16 11\n",
         "expected": "22"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "two-sum-ii-sorted",
     "title": "Two Sum II - Input Array Is Sorted",
     "difficulty": "medium",
     "prompt": "Read a line of sorted space-separated integers, then a line with a target. Exactly one pair adds up to the target; print their 1-based indices in ascending order, separated by a space.\n\nInput:\n  2 7 11 15\n  9\nOutput:\n  1 2",
-    "spoken_intro": "Like the first two-sum, but the array is sorted and indices are 1-based. Find the unique pair that hits the target. The two-pointer trick fits well.",
+    "spoken_intro": "Like the first two-sum, but the array is sorted and the indices are one-based. Find the unique pair that adds up to the target, and print their indices in ascending order.",
     "starter": {
       "python": "nums = list(map(int, input().split()))\ntarget = int(input())\n\n# TODO: print the 1-based indices of the pair summing to target\n",
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n    int target;\n    cin >> target;\n\n    // TODO: print the 1-based indices of the pair summing to target\n    return 0;\n}\n"
@@ -1862,7 +1954,11 @@
         "stdin": "-10 -7 1 4 7\n-9\n",
         "expected": "1 3"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "happy-number",
@@ -1952,14 +2048,18 @@
         "stdin": "15\n",
         "expected": "false"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(log n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "maximum-subarray",
     "title": "Maximum Subarray",
     "difficulty": "medium",
     "prompt": "Read a line of space-separated integers. Print the largest sum obtainable from a contiguous subarray (at least one element).\n\nInput:\n  -2 1 -3 4 -1 2 1 -5 4\nOutput:\n  6",
-    "spoken_intro": "A classic — Kadane's. Given a list of integers, find the contiguous stretch with the largest sum and print that sum. Run the tests and submit when ready.",
+    "spoken_intro": "Given a list of integers, find the contiguous stretch with the largest sum and print that sum. Run the tests and submit when you're ready.",
     "starter": {
       "python": "nums = list(map(int, input().split()))\n\n# TODO: print the maximum contiguous subarray sum\n",
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the maximum contiguous subarray sum\n    return 0;\n}\n"
@@ -2042,7 +2142,11 @@
         "stdin": "4 -3 4 -3 -3 1 -1 -2 1\n",
         "expected": "5"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "longest-substring-no-repeat",
@@ -2132,14 +2236,18 @@
         "stdin": "badbacddbcaa\n",
         "expected": "4"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(min(n, m))"
+    }
   },
   {
     "id": "container-most-water",
     "title": "Container With Most Water",
     "difficulty": "medium",
     "prompt": "Read a line of space-separated non-negative integers (heights of vertical lines). Choosing two lines, the water they hold is the shorter height times their distance apart. Print the maximum.\n\nInput:\n  1 8 6 2 5 4 8 3 7\nOutput:\n  49",
-    "spoken_intro": "Two-pointer time. Each number is the height of a vertical line; pick two to hold the most water — shorter side times the gap. Print the maximum area.",
+    "spoken_intro": "Each number is the height of a vertical line on the x-axis. Pick two lines that, with the axis, hold the most water; the area is the shorter height times the distance between them. Print the maximum area.",
     "starter": {
       "python": "height = list(map(int, input().split()))\n\n# TODO: print the maximum water the container can hold\n",
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> height;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) height.push_back(x);\n\n    // TODO: print the maximum water the container can hold\n    return 0;\n}\n"
@@ -2222,14 +2330,18 @@
         "stdin": "1 9 6 6 5 3\n",
         "expected": "15"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "coin-change",
     "title": "Coin Change",
     "difficulty": "medium",
     "prompt": "Read a line of space-separated coin denominations, then a line with a target amount. Print the fewest coins that sum to the amount, or -1 if it cannot be made.\n\nInput:\n  1 2 5\n  11\nOutput:\n  3",
-    "spoken_intro": "A DP one. Given coin denominations and a target amount, print the fewest coins that make the amount, or minus one if it's impossible. Submit when ready.",
+    "spoken_intro": "Given some coin denominations and a target amount, print the fewest coins needed to make that amount, or minus one if it's impossible.",
     "starter": {
       "python": "coins = list(map(int, input().split()))\namount = int(input())\n\n# TODO: print the fewest coins to make amount, or -1\n",
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> coins;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) coins.push_back(x);\n    int amount;\n    cin >> amount;\n\n    // TODO: print the fewest coins to make amount, or -1\n    return 0;\n}\n"
@@ -2312,14 +2424,18 @@
         "stdin": "2\n17\n",
         "expected": "-1"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n*amount)",
+      "space": "O(amount)"
+    }
   },
   {
     "id": "house-robber",
     "title": "House Robber",
     "difficulty": "medium",
     "prompt": "Read a line of space-separated non-negative integers (money in each house). You cannot rob two adjacent houses. Print the maximum you can rob.\n\nInput:\n  2 7 9 3 1\nOutput:\n  12",
-    "spoken_intro": "Another DP. Each number is the cash in a house, but you can't hit two houses in a row. Print the maximum you can take. Run the tests and submit when ready.",
+    "spoken_intro": "Each number is the cash in a house along a street, but you can't rob two adjacent houses. Print the maximum total you can take.",
     "starter": {
       "python": "nums = list(map(int, input().split()))\n\n# TODO: print the maximum non-adjacent sum\n",
       "c++": "#include <iostream>\n#include <sstream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    vector<int> nums;\n    stringstream ss(line);\n    int x;\n    while (ss >> x) nums.push_back(x);\n\n    // TODO: print the maximum non-adjacent sum\n    return 0;\n}\n"
@@ -2402,7 +2518,11 @@
         "stdin": "7 5 3 4 7 7 6\n",
         "expected": "23"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "unique-paths",
@@ -2492,7 +2612,11 @@
         "stdin": "6 4\n",
         "expected": "56"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(m*n)",
+      "space": "O(n)"
+    }
   },
   {
     "id": "decode-ways",
@@ -2582,7 +2706,11 @@
         "stdin": "89158\n",
         "expected": "2"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "maximum-product-subarray",
@@ -2672,7 +2800,11 @@
         "stdin": "0 0 -3\n",
         "expected": "0"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(n)",
+      "space": "O(1)"
+    }
   },
   {
     "id": "search-rotated-sorted",
@@ -2762,6 +2894,10 @@
         "stdin": "5 9 16 17 2 3\n2\n",
         "expected": "4"
       }
-    ]
+    ],
+    "optimal": {
+      "time": "O(log n)",
+      "space": "O(1)"
+    }
   }
 ]
