@@ -98,49 +98,6 @@ upload a resume, and take the interview. Stop with `Ctrl+C`.
 ai-interviewer --start [--host HOST] [--port PORT] [--no-browser]
 ```
 
-### Models
-
-- **STT** — hosted Groq `whisper-large-v3` (`provider: groq`, needs `GROQ_API_KEY`),
-  or local `faster-whisper` (`provider: local`, `medium` by default, downloaded
-  automatically). Groq automatically falls back to local Whisper on any failure.
-- **VAD** — `silero-vad`, downloaded automatically
-- **TTS** — Piper voice files under `models/en/en_US/lessac/medium/`
-- **LLM** — either a local GGUF model under `models/`, or set `provider: gemini`
-  in `config.yaml` and export `GEMINI_API_KEY`
-
----
-
-## Configuration
-
-All settings live in `config.yaml`:
-
-```yaml
-interview:
-  max_questions: 2
-  follow_up_enabled: true
-  coding_enabled: true        # run the coding round (needs Piston)
-  coding_questions: 1         # how many coding problems to pose
-  code_time_limit: 300        # coding round time cap (seconds) — also the UI timer
-llm:
-  provider: gemini            # gemini | local
-  model_name: gemini-2.5-flash
-stt:
-  provider: groq              # groq | local
-  model_name: whisper-large-v3  # groq model id
-  model_path: medium          # local faster-whisper model (fallback)
-vad:
-  chunk_size: 512             # must be 512 at 16kHz on Windows
-  silence_duration_ms: 2000
-tts:
-  voice: en_US-lessac-medium
-executor:                     # Piston code-execution engine
-  base_url: http://localhost:2000
-  python_version: 3.12.0
-  cpp_version: 10.2.0
-```
-
----
-
 ## Running
 
 ### Browser (recommended)
@@ -176,75 +133,6 @@ useful for testing the backend without a browser:
 
 ```bash
 venv\Scripts\python.exe -m backend.test_client docs/Ravi_AI.pdf Ravi
-```
-
----
-
-## WebSocket protocol
-
-**Client → Server**
-
-| Frame | Payload |
-|-------|---------|
-| JSON `start` | `{ "type": "start", "candidate_name": "..." }` |
-| binary | float32 PCM, 16kHz mono (mic audio while listening) |
-| JSON `run_code` | `{ "type": "run_code", "language": "python", "code": "..." }` |
-| JSON `run_tests` | `{ "type": "run_tests", "language": "...", "code": "..." }` (runs visible tests) |
-| JSON `code_submit` | `{ "type": "code_submit", "language": "...", "code": "..." }` |
-
-**Server → Client**
-
-| Frame | Payload |
-|-------|---------|
-| binary | TTS WAV bytes (spoken question) |
-| JSON `status` | `{ "message": "..." }` progress updates |
-| JSON `listening` | start streaming mic audio |
-| JSON `listening_stop` | VAD detected end; stop streaming |
-| JSON `transcribed` | `{ "text": "..." }` what was heard |
-| JSON `coding_question` | `{ "title", "prompt", "languages", "starter", "tests", "time_limit" }` show the editor (only *visible* tests; hidden tests are never sent) |
-| JSON `run_result` | `{ "stdout", "stderr", "compile_error", "exit_code", "timed_out" }` |
-| JSON `test_results` | `{ "results": [{ "name", "passed", "expected", "actual", "error" }] }` (visible tests) |
-| JSON `engine_error` | `{ "message": "..." }` code-execution engine unreachable (not the candidate's code) |
-| JSON `report` | `{ "markdown": "..." }` final report |
-| JSON `reload` | interview ended early (e.g. silence) — client resets itself |
-| JSON `error` | `{ "message": "..." }` |
-
----
-
-## Project layout
-
-```
-ai_interviewer/        core pipeline (pip package)
-  parser.py            PDF → ResumeData
-  question_gen.py      adaptive questions, follow-ups, coding-question bank
-  sentence_splitter.py incremental splitter for streaming TTS
-  vad.py               Silero VAD
-  stt.py               local Whisper / Groq client + fallback
-  llm.py               local / Gemini client (with .stream())
-  tts.py               Piper TTS
-  executor.py          Piston code-execution client
-  report.py            evaluation (verbal + coding rubric) + markdown report
-  config.py            config.yaml loader
-  data/
-    coding_questions.json  coding problem bank (prompt, starter, visible + hidden tests)
-backend/
-  main.py              FastAPI app, /upload, /ws
-  session.py           per-connection InterviewSession state
-  ws_handler.py        interview loop over WebSocket (verbal + coding)
-  pipeline.py          CLI mic/speaker pipeline
-  test_client.py       terminal WS test client
-frontend/
-  index.html, app.js, style.css   browser UI (vanilla JS + CodeMirror editor)
-scripts/
-  build_coding_bank.py  solver-driven authoring of coding problems (computes
-                        visible + hidden test outputs from a reference solver)
-  bench_tts.py, bench_latency.py  latency benchmarks
-docs/
-  DESIGN.md            full design document
-  piston_setup.md      code-execution engine setup
-  benchmarks.md        latency results
-  ws_backend_plan.md   WebSocket backend plan
-config.yaml
 ```
 
 ---
