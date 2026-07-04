@@ -25,6 +25,7 @@ dependencies = [
     "python-multipart",
     "websockets",
     "google-genai",
+    "groq",
     "httpx",
     "python-dotenv",
     "loguru",

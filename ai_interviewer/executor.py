@@ -3,7 +3,7 @@ from typing import Optional
 
 import httpx  # type: ignore
 from loguru import logger  # type: ignore
-
+import os
 from .config import ExecutorConfig
 
 
@@ -35,6 +35,8 @@ class PistonExecutor:
     def __init__(self, cfg: ExecutorConfig) -> None:
         self.cfg = cfg
         self._url = cfg.base_url.rstrip("/") + "/api/v2/execute"
+        token = os.environ.get("PISTON_TOKEN")
+        self._headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._versions = {"python": cfg.python_version, "c++": cfg.cpp_version}
 
     def run(self, language: str, code: str, stdin: str = "") -> ExecResult:
@@ -52,7 +54,7 @@ class PistonExecutor:
         }
 
         try:
-            resp = httpx.post(self._url, json=payload, timeout=30.0)
+            resp = httpx.post(self._url, json=payload, headers=self._headers, timeout=30.0)
             resp.raise_for_status()
             data = resp.json()
         except Exception as exc:
@@ -76,7 +78,7 @@ class PistonExecutor:
         return ExecResult(
             stdout=run.get("stdout", ""),
             stderr=run.get("stderr", ""),
-            exit_code=run.get("code") if run.get("code") is not None else 1,
+            exit_code=run.get("code") if run.get("code") is not None else 1, # type: ignore
             compile_error=compile_error,
             timed_out=timed_out,
         )

@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, UploadFile, File, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.concurrency import run_in_threadpool
-import os, uuid, shutil, random
+from datetime import date
+import os, uuid, shutil, random, threading
 
 from ai_interviewer.config import load_config
 from ai_interviewer.parser import check_is_resume
@@ -22,6 +23,52 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 sessions = {}
+
+# --- simple daily rate limiting for the public demo -------------------------
+# In-memory is fine: the app runs as a single instance (like `sessions` above)
+# and a reset on redeploy/rollover is harmless. Caps the number of interviews
+# started per IP and in total per day, so the demo can't be looped to drain the
+# Gemini spend cap or hit Groq's free-tier limits.
+_RL_LOCK = threading.Lock()
+_rl_state = {"day": date.today(), "per_ip": {}, "total": 0}
+
+PER_IP_DAILY = 5     # interviews per IP per day
+GLOBAL_DAILY = 40    # interviews per day, all users combined
+
+# IPs that skip the cap entirely (the developer's own machine). Set in Railway
+# as a comma-separated list, e.g. RL_EXEMPT_IPS="203.0.113.7,198.51.100.4".
+# Your public IP can change between networks — update this when it does.
+# Find your current one at https://api.ipify.org
+RL_EXEMPT_IPS = {
+    ip.strip() for ip in os.environ.get("RL_EXEMPT_IPS", "").split(",") if ip.strip()
+}
+
+
+def _client_ip(request: Request) -> str:
+    # Railway sits in front of the app, so request.client.host is the proxy.
+    # The original client is the first hop in X-Forwarded-For.
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit(ip: str):
+    """Atomically roll the day, check caps, and count this attempt.
+    Returns None if allowed, or a reason string ("busy" / "ip") if blocked."""
+    if ip in RL_EXEMPT_IPS:          # developer's own machine — never capped
+        return None
+    with _RL_LOCK:
+        today = date.today()
+        if today != _rl_state["day"]:
+            _rl_state.update(day=today, per_ip={}, total=0)
+        if _rl_state["total"] >= GLOBAL_DAILY:
+            return "busy"
+        if _rl_state["per_ip"].get(ip, 0) >= PER_IP_DAILY:
+            return "ip"
+        _rl_state["per_ip"][ip] = _rl_state["per_ip"].get(ip, 0) + 1
+        _rl_state["total"] += 1
+        return None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,10 +93,22 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/upload")
-async def upload(file: UploadFile):
-    # validate PDF, save to uploads/{uuid}.pdf
-    # create InterviewSession, store in sessions
-    # return session_id
+async def upload(file: UploadFile, request: Request):
+    # rate-limit the public demo before doing any expensive work (the resume
+    # check below already costs a Gemini call), then validate PDF, save to
+    # uploads/{uuid}.pdf, create InterviewSession, and return session_id.
+
+    blocked = _rate_limit(_client_ip(request))
+    if blocked == "busy":
+        return JSONResponse(
+            status_code=429,
+            content={"error": "The demo has hit its daily limit — please try again tomorrow."},
+        )
+    if blocked == "ip":
+        return JSONResponse(
+            status_code=429,
+            content={"error": "You've reached the daily interview limit for this demo. Please try again tomorrow."},
+        )
 
     if file.content_type != "application/pdf":
         return JSONResponse(status_code=400, content={"error": "PDF only"})

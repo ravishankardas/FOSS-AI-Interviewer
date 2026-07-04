@@ -1,0 +1,40 @@
+# Keep the build context small and the image lean.
+
+# Virtualenvs
+venv/
+.venv/
+env/
+
+# Large local model weights — NOT needed on the Gemini/Groq path.
+# The 2GB Llama GGUF (local LLM) and any locally-downloaded voices/whisper
+# models are excluded; Piper voices are re-fetched fresh at build time.
+models/
+
+# Python caches / build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+
+# Frontend build tooling (the live app is vanilla JS; node_modules not shipped)
+frontend/node_modules/
+
+# Runtime / local data
+uploads/
+history/
+*.log
+
+# Secrets & local env (Railway provides env vars directly)
+.env
+.envrc
+
+# VCS / editor / docs
+.git/
+.gitignore
+.vscode/
+.idea/
+docs/
+*.md
+!README.md
