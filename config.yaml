@@ -2,7 +2,7 @@ interview:
   answer_time_limit: 120
   follow_up_enabled: true
   max_questions: 2
-  greeting_enabled: false      # speak the greeting + capture a warm-up intro
+  greeting_enabled: true       # speak the greeting + capture a warm-up intro
   barge_in: true              # let the candidate interrupt the interviewer's TTS
   coding_enabled: true
   coding_questions: 1
