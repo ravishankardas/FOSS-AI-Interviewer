@@ -99,7 +99,10 @@ function lampLive(on) {
   document.body.classList.toggle("interview-live", on);
 }
 function setLabel(text) { onairLabel.textContent = text; }
-function setSpeaker(text) { speakerTag.textContent = text; }
+function setSpeaker(text) { speakerTag.textContent = text; speakerTag.classList.remove("thinking"); }
+// like setSpeaker, but appends an animated "…" so the wait (resume parse, LLM,
+// TTS synth) reads as active work rather than a frozen line
+function setThinking(text) { speakerTag.textContent = text; speakerTag.classList.add("thinking"); }
 // show/animate the waveform whenever a party is talking
 function waveActive(on) { waveEl.classList.toggle("active", on); }
 
@@ -599,7 +602,7 @@ async function startInterview(e) {
       ws.send(JSON.stringify({ type: "start", candidate_name: candidateName }));
       lampLive(true);
       setLabel("On air");
-      setSpeaker("Preparing your interview…");
+      setThinking("Preparing your interview");
     };
 
     ws.onmessage = async (ev) => {
@@ -655,7 +658,7 @@ async function startInterview(e) {
           streaming = false;
           waveActive(false);
           setLabel("On air");
-          setSpeaker("Got it — thinking…");
+          setThinking("Got it — thinking");
           break;
         case "caption":
           // live captions: the interviewer just said something

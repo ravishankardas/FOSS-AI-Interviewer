@@ -180,9 +180,11 @@ async def _ask_question(ws: WebSocket, session: InterviewSession, question: Ques
 
     session.state = SessionState.SPEAKING
     logger.info(f"[{session.session_id[:8]}] asking: {question.text}")
-    await _caption(ws, "interviewer", question.text)
     if wav_bytes is None:
         wav_bytes = await run_in_executor(session.tts.synthesize, question.text)
+    # caption only once the audio is ready, so the text and voice land together
+    # (otherwise the caption sits on screen during the whole synth, e.g. the greeting)
+    await _caption(ws, "interviewer", question.text)
     await _send_audio(ws, session, wav_bytes)
 
     await ws.send_json({"type": "listening", "turn": turn, "barge": barge})
