@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FOSS AI Interviewer</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M7 3.5 L19 3.5 A4.5 4.5 0 0 1 23.5 8 L23.5 14 A4.5 4.5 0 0 1 19 18.5 L12 18.5 L7.5 22.5 L7.5 18.5 L7 18.5 A4.5 4.5 0 0 1 2.5 14 L2.5 8 A4.5 4.5 0 0 1 7 3.5 Z' fill='%23191510' stroke='%23E8A33D' stroke-width='1.4' stroke-linejoin='round'/%3E%3Cg stroke='%23ECE6DA' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='8.5' y1='13.5' x2='8.5' y2='8.5'/%3E%3Cline x1='12' y1='14.8' x2='12' y2='7.2'/%3E%3Cline x1='15.5' y1='13.5' x2='15.5' y2='8.5'/%3E%3Cline x1='19' y1='12.5' x2='19' y2='9.5'/%3E%3C/g%3E%3C/svg%3E" />
+  <title>Final Round</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Ctext x='13' y='19' font-family='Arial,sans-serif' font-size='18' font-weight='700' fill='%2314161a' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -25,19 +25,13 @@
        interviewer is watching the screen -->
   <div class="screen-glow" aria-hidden="true"></div>
   <div class="frame">
+    <!-- branded header that appears only on the printed / saved PDF -->
+    <div id="print-header" class="print-header" aria-hidden="true">
+      <span class="print-wordmark">Final Round</span>
+    </div>
     <header class="topbar">
       <span class="brand">
-        <svg class="logo" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
-          <path d="M7 3.5 L19 3.5 A4.5 4.5 0 0 1 23.5 8 L23.5 14 A4.5 4.5 0 0 1 19 18.5 L12 18.5 L7.5 22.5 L7.5 18.5 L7 18.5 A4.5 4.5 0 0 1 2.5 14 L2.5 8 A4.5 4.5 0 0 1 7 3.5 Z"
-                fill="var(--accent-sw)" stroke="var(--accent)" stroke-width="1.4" stroke-linejoin="round"/>
-          <g stroke="var(--accent)" stroke-width="2" stroke-linecap="round">
-            <line x1="8.5"  y1="13.5" x2="8.5"  y2="8.5"/>
-            <line x1="12"   y1="14.8" x2="12"   y2="7.2"/>
-            <line x1="15.5" y1="13.5" x2="15.5" y2="8.5"/>
-            <line x1="19"   y1="12.5" x2="19"   y2="9.5"/>
-          </g>
-        </svg>
-        <span class="wordmark">FOSS&nbsp;Interviewer</span>
+        <span class="wordmark">Final&nbsp;Round</span>
       </span>
       <span class="topbar-meta">voice&nbsp;·&nbsp;technical&nbsp;screen</span>
     </header>
@@ -105,6 +99,11 @@
       <h2 id="coding-title" class="coding-title"></h2>
       <pre id="coding-prompt" class="coding-prompt"></pre>
 
+      <div class="coding-listening">
+        <span class="mic-dot" aria-hidden="true"></span>
+        The interviewer's listening, talk any time to ask a question or for a hint.
+      </div>
+
       <div class="coding-toolbar">
         <button id="restart-coding" type="button" class="restart-btn restart-abort">Restart <span aria-hidden="true">↺</span></button>
         <label class="coding-lang-label" for="coding-lang">Language</label>
@@ -154,11 +153,27 @@
       <p id="history-empty" class="lede" hidden>No past interviews yet — finish one and it'll show up here.</p>
       <article id="history-detail" class="dossier" hidden></article>
       <div class="report-actions">
+        <button id="history-download" type="button" class="begin download-btn" hidden>
+          Download PDF <span aria-hidden="true">↓</span>
+        </button>
         <button id="history-back" type="button" class="restart-btn">← Back</button>
       </div>
     </section>
 
     <p id="error" class="error" role="alert" hidden></p>
+  </div>
+
+  <!-- nudge shown after repeated non-resume uploads -->
+  <div id="resume-modal" class="modal-backdrop" hidden>
+    <div class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="resume-modal-title">
+      <h2 id="resume-modal-title" class="modal-title">That doesn't look like a resume</h2>
+      <p class="modal-body">
+        FinalRound needs your <strong>resume or CV</strong> please choose a PDF with your work
+        experience, skills, and education. Double-check you've picked the right
+        file and try again.
+      </p>
+      <button id="resume-modal-ok" type="button" class="begin">Got it</button>
+    </div>
   </div>
 
   <script src="app.js"></script>

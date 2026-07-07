@@ -623,16 +623,84 @@ li.CodeMirror-hint-active { background: var(--accent); color: #fff; }
 #interview .restart-abort { margin-top: 2.5rem; opacity: 0.7; }
 #interview .restart-abort:hover { opacity: 1; }
 
-/* ── error ────────────────────────────── */
+/* ── error toast ──────────────────────── */
+/* fixed bottom-center toast (Android-style): slides up, auto-dismisses. */
 .error {
-  margin-top: 2rem;
+  position: fixed;
+  left: 50%;
+  bottom: 1.75rem;
+  z-index: 60;
+  max-width: min(90vw, 420px);
+  transform: translateX(-50%);
   font-size: 0.9rem;
-  color: var(--err);
-  background: #fbeeee;
-  border: 1px solid #edc2c2;
-  border-radius: 8px;
-  padding: 0.75rem 0.9rem;
+  font-weight: 500;
+  color: #fff;
+  background: #23262c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid var(--err);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(20, 22, 26, 0.28);
+  padding: 0.8rem 1.1rem;
+  animation: toast-in 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
+.error[hidden] { display: none; }
+/* info variant (non-error nudges, e.g. the coding-round talk hint) */
+.error.info { border-left-color: var(--accent); }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── coding round: "interviewer is listening" affordance ── */
+.coding-listening {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.1rem 0 1.1rem;
+}
+.coding-listening .mic-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: mic-pulse 1.9s ease-out infinite;
+}
+@keyframes mic-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(47, 107, 237, 0.4); }
+  70%  { box-shadow: 0 0 0 7px rgba(47, 107, 237, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(47, 107, 237, 0); }
+}
+
+/* ── modal (repeated non-resume nudge) ── */
+.modal-backdrop[hidden] { display: none; }
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(20, 22, 26, 0.45);
+  animation: modal-fade 0.15s ease;
+}
+.modal-card {
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(20, 22, 26, 0.22);
+  max-width: 400px;
+  width: 100%;
+  padding: 1.6rem 1.5rem 1.5rem;
+  text-align: left;
+}
+.modal-title { font-size: 1.15rem; font-weight: 650; margin: 0 0 0.6rem; color: var(--ink); }
+.modal-body { font-size: 0.92rem; color: var(--muted); margin: 0 0 1.4rem; }
+.modal-card .begin { margin-top: 0; width: 100%; }
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* ── responsive ───────────────────────── */
 @media (max-width: 520px) {
@@ -648,7 +716,10 @@ li.CodeMirror-hint-active { background: var(--accent); color: #fff; }
   }
 }
 
-/* ── print: only the report ───────────── */
+/* branded header for the printed PDF only (hidden on screen) */
+.print-header { display: none; }
+
+/* ── print: report or the open history dossier ───────────── */
 @media print {
   body { background: #fff; color: #111; }
   .topbar, #setup, #interview, .report-actions, .error { display: none !important; }
@@ -661,4 +732,19 @@ li.CodeMirror-hint-active { background: var(--accent); color: #fff; }
   .dossier h1, .dossier h2, .dossier h3 { color: #111; }
   .dossier code { background: #f0f0f0; }
   .dossier hr { border-top-color: #ccc; }
+
+  /* printed brand header */
+  .print-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.4rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid #ccc;
+  }
+  .print-wordmark { font-size: 1.25rem; font-weight: 700; color: #111; letter-spacing: -0.01em; }
+
+  /* when printing from history, keep only the open dossier */
+  #history { display: block !important; }
+  #history .eyebrow, .history-title, #history-list, #history-empty { display: none !important; }
 }

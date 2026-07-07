@@ -1,4 +1,4 @@
-# FOSS AI Interviewer
+# FinalRound
 
 An open-source, voice-based AI interviewer. It parses a candidate's resume,
 conducts a spoken interview over a **STT → LLM → TTS** pipeline, and produces a
@@ -24,7 +24,7 @@ Runs locally on CPU (GPU optional). Pluggable backends — the **LLM** is local
 ## How it works
 
 <p align="center">
-  <img src="docs/architecture-schematic-v2.svg" alt="FOSS AI Interviewer architecture" width="540" />
+  <img src="docs/architecture-schematic-v2.svg" alt="FinalRound architecture" width="540" />
 </p>
 
 Two ways to run it:

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import hashlib
 import json
 import os
 import random
@@ -172,6 +173,40 @@ def _history_to_text(history: List["Turn"]) -> str:
     return "\n".join(lines)
 
 
+# ── dev-only persistent cache for the adaptive-question LLM call ──────────
+# Keyed by the resume + exchange-so-far ONLY (persona is excluded, since the
+# random interviewer voice changes per run and would bust every hit). On disk
+# so it survives the frequent restarts of `--reload` during development. Enabled
+# only when LITMUS_QGEN_CACHE is set — it must never be on in production, where
+# every interview should generate fresh.
+_QGEN_CACHE_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), ".qgen_cache"
+)
+
+
+def _qgen_cache_enabled() -> bool:
+    return bool(os.environ.get("LITMUS_QGEN_CACHE"))
+
+
+def _qgen_cache_key(resume: ResumeData, history: List["Turn"]) -> str:
+    blob = _resume_to_text(resume) + "\n---\n" + _history_to_text(history)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def _qgen_cache_get(key: str):
+    path = os.path.join(_QGEN_CACHE_DIR, f"{key}.json")
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
+def _qgen_cache_put(key: str, data: dict) -> None:
+    os.makedirs(_QGEN_CACHE_DIR, exist_ok=True)
+    with open(os.path.join(_QGEN_CACHE_DIR, f"{key}.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f)
+
+
 def generate_adaptive_question(
     resume: ResumeData, history: List["Turn"], llm: Any, persona: str = ""
 ) -> tuple[Question, int]:
@@ -185,6 +220,16 @@ def generate_adaptive_question(
     `persona` (optional) is a sentence identifying the interviewer (name +
     gender) prepended to the system prompt so the voice and persona line up.
     """
+    cache_on = _qgen_cache_enabled()
+    key = _qgen_cache_key(resume, history) if cache_on else None
+    if cache_on:
+        data = _qgen_cache_get(key)
+        if data is not None:
+            logger.info("[qgen] cache hit — skipping Gemini call (dev cache)")
+            question = Question(text=data["next_text"], topic=data["next_topic"])
+            mastery = int(data["last_mastery"]) if history else 0
+            return question, mastery
+
     prompt = (
         f"Resume:\n{_resume_to_text(resume)}\n\n"
         f"Exchange so far:\n{_history_to_text(history)}"
@@ -194,6 +239,8 @@ def generate_adaptive_question(
         prompt=prompt, system=system, response_schema=_AdaptiveSchema
     )
     data = json.loads(response)
+    if cache_on:
+        _qgen_cache_put(key, data)
     question = Question(text=data["next_text"], topic=data["next_topic"])
     mastery = int(data["last_mastery"]) if history else 0
     return question, mastery

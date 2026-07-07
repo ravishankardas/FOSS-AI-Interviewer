@@ -16,6 +16,7 @@ const speakerTag = $("speaker-tag");
 const viewReportBtn = $("view-report");
 const verdictEl = $("verdict");
 const errorEl = $("error");
+const resumeModal = $("resume-modal");
 // coding round
 const codingEl = $("coding");
 const codingTitleEl = $("coding-title");
@@ -237,10 +238,31 @@ function showVerdict(md) {
   verdictEl.classList.toggle("no", v === "NO_HIRE");
 }
 
-function showError(msg) {
+let toastTimer = null;
+function _toast(msg, { info = false, ms = 4000 } = {}) {
   errorEl.textContent = msg;
+  errorEl.classList.toggle("info", info);
   errorEl.hidden = false;
+  // re-trigger the slide-in animation even if a toast is already up
+  errorEl.style.animation = "none";
+  void errorEl.offsetWidth;
+  errorEl.style.animation = "";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { errorEl.hidden = true; }, ms);
 }
+function showError(msg) { _toast(msg); }
+// non-error nudge — blue toast, lingers a bit longer
+function showHint(msg) { _toast(msg, { info: true, ms: 6000 }); }
+
+// count consecutive "not a resume" rejections; after this many in a row we
+// stop showing the inline error and pop a modal nudge instead. Reset on a
+// successful upload or when a different file is chosen. Purely a UX nudge —
+// no server state, so a refresh naturally clears it.
+const NOT_RESUME_LIMIT = 3;
+let notResumeTries = 0;
+
+function showResumeModal() { resumeModal.hidden = false; }
+function hideResumeModal() { resumeModal.hidden = true; }
 
 // ── coding round ──────────────────────────────────────
 const KEYWORDS = {
@@ -449,6 +471,8 @@ function showCoding(msg) {
   // so spoken questions / hint requests are heard (server VAD gates out its own TTS)
   streaming = true;
   sendCode("code_state");   // give the interviewer the starting screen state
+  // one-time nudge: many candidates don't realise the round is conversational
+  showHint("You can talk to the interviewer during the coding round,  ask a question or for a hint any time.");
   // CodeMirror needs a refresh once its container is visible
   setTimeout(() => cm.refresh(), 0);
 }
@@ -544,8 +568,20 @@ async function startInterview(e) {
     const resp = await fetch("/upload", { method: "POST", body: form });
     if (!resp.ok) {
       const body = await resp.json().catch(() => ({}));
+      if (body.reason === "not_resume") {
+        notResumeTries += 1;
+        if (notResumeTries >= NOT_RESUME_LIMIT) {
+          notResumeTries = 0;
+          showResumeModal();
+        } else {
+          showError(body.error);
+        }
+        restoreStart();
+        return;
+      }
       throw new Error(body.error || `Upload failed (${resp.status}).`);
     }
+    notResumeTries = 0;
     const { session_id } = await resp.json();
 
     await setupAudio();
@@ -718,7 +754,10 @@ fileInput.addEventListener("change", () => {
   const f = fileInput.files[0];
   fileHint.textContent = f ? f.name : "No file chosen";
   fileHint.classList.toggle("set", !!f);
+  notResumeTries = 0;   // a different file — start the count fresh
 });
+
+$("resume-modal-ok").addEventListener("click", hideResumeModal);
 
 $("callsheet").addEventListener("submit", startInterview);
 
@@ -792,6 +831,8 @@ const historyEl = $("history");
 const historyListEl = $("history-list");
 const historyDetailEl = $("history-detail");
 const historyEmptyEl = $("history-empty");
+const historyDownloadEl = $("history-download");
+let historyName = "";   // candidate name of the currently open history detail
 
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -807,6 +848,7 @@ async function openHistory() {
   historyDetailEl.hidden = true;
   historyListEl.hidden = false;
   historyEmptyEl.hidden = true;
+  historyDownloadEl.hidden = true;   // only shown when a detail is open
   historyListEl.innerHTML = "";
   try {
     const resp = await fetch("/history");
@@ -852,14 +894,25 @@ async function openHistoryDetail(id) {
     const resp = await fetch(`/history/${id}`);
     if (!resp.ok) throw new Error();
     const rec = await resp.json();
+    historyName = rec.candidate_name || "Candidate";
     historyDetailEl.innerHTML = renderMarkdown(rec.markdown || "");
     historyListEl.hidden = true;
     historyEmptyEl.hidden = true;
     historyDetailEl.hidden = false;
+    historyDownloadEl.hidden = false;
   } catch {
     showError("Couldn't load that interview.");
   }
 }
+
+// Download a past interview's report as PDF (same print-to-PDF path as the
+// end-of-interview download). The title seeds the default filename.
+historyDownloadEl.addEventListener("click", () => {
+  const prevTitle = document.title;
+  document.title = `Interview Report - ${historyName}`;
+  window.print();
+  document.title = prevTitle;
+});
 
 $("show-history").addEventListener("click", openHistory);
 $("history-back").addEventListener("click", () => {

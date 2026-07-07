@@ -236,3 +236,4 @@ questions_cache.json
 uploads/
 coding_ui_test.html
 history/
+.qgen_cache/

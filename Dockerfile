@@ -1,4 +1,4 @@
-# FOSS AI Interviewer — Railway app image (Gemini + Groq + local Piper TTS).
+# FinalRound — Railway app image (Gemini + Groq + local Piper TTS).
 # The coding round's code execution runs on a separate hardened Piston droplet
 # (see config.yaml `executor.base_url`), so this image needs no Docker/runtimes.
 FROM python:3.11-slim

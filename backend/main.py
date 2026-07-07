@@ -42,6 +42,9 @@ GLOBAL_DAILY = 40    # interviews per day, all users combined
 RL_EXEMPT_IPS = {
     ip.strip() for ip in os.environ.get("RL_EXEMPT_IPS", "").split(",") if ip.strip()
 }
+# loopback is always the developer's own machine (on Railway real visitors
+# arrive via the proxy with X-Forwarded-For, never as loopback) — never cap it.
+RL_EXEMPT_IPS |= {"127.0.0.1", "::1"}
 
 
 def _client_ip(request: Request) -> str:
@@ -53,9 +56,9 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _rate_limit(ip: str):
-    """Atomically roll the day, check caps, and count this attempt.
-    Returns None if allowed, or a reason string ("busy" / "ip") if blocked."""
+def _rate_limit_check(ip: str):
+    """Read-only: roll the day and check caps WITHOUT counting. Returns None if
+    allowed, or a reason string ("busy" / "ip") if already at the limit."""
     if ip in RL_EXEMPT_IPS:          # developer's own machine — never capped
         return None
     with _RL_LOCK:
@@ -66,9 +69,19 @@ def _rate_limit(ip: str):
             return "busy"
         if _rl_state["per_ip"].get(ip, 0) >= PER_IP_DAILY:
             return "ip"
+        return None
+
+
+def _rate_limit_commit(ip: str):
+    """Count one successful interview start against the caps."""
+    if ip in RL_EXEMPT_IPS:
+        return
+    with _RL_LOCK:
+        today = date.today()
+        if today != _rl_state["day"]:
+            _rl_state.update(day=today, per_ip={}, total=0)
         _rl_state["per_ip"][ip] = _rl_state["per_ip"].get(ip, 0) + 1
         _rl_state["total"] += 1
-        return None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -98,7 +111,8 @@ async def upload(file: UploadFile, request: Request):
     # check below already costs a Gemini call), then validate PDF, save to
     # uploads/{uuid}.pdf, create InterviewSession, and return session_id.
 
-    blocked = _rate_limit(_client_ip(request))
+    client_ip = _client_ip(request)
+    blocked = _rate_limit_check(client_ip)
     if blocked == "busy":
         return JSONResponse(
             status_code=429,
@@ -137,8 +151,14 @@ async def upload(file: UploadFile, request: Request):
         os.remove(path)
         return JSONResponse(
             status_code=400,
-            content={"error": "This PDF doesn't look like a resume. Please upload your resume/CV."},
+            content={
+                "error": "This PDF doesn't look like a resume. Please upload your resume/CV.",
+                "reason": "not_resume",
+            },
         )
+
+    # a real resume → this counts as an interview start; charge it to the caps.
+    _rate_limit_commit(client_ip)
 
     # pick a random voice for this interview and bind it to the session so every
     # synth call uses it; the interviewer's name/gender persona follows the voice.

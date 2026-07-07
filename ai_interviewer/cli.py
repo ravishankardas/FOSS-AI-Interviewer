@@ -1,4 +1,4 @@
-"""Command-line entry point for the FOSS AI Interviewer.
+"""Command-line entry point for FinalRound, the AI interviewer.
 
 Installed as the `ai-interviewer` command (see pyproject.toml). Run:
 
@@ -77,7 +77,7 @@ def _load_server_settings():
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="ai-interviewer", description="FOSS AI Interviewer"
+        prog="ai-interviewer", description="FinalRound — AI interviewer"
     )
     parser.add_argument(
         "--start", action="store_true",
@@ -107,7 +107,7 @@ def main() -> None:
         threading.Thread(target=_open_when_ready, args=(url,), daemon=True).start()
 
     mode = " [reload]" if args.reload else ""
-    print(f"Starting FOSS AI Interviewer on {url}{mode} (Ctrl+C to stop)")
+    print(f"Starting FinalRound on {url}{mode} (Ctrl+C to stop)")
     import uvicorn
 
     # reload watches the whole repo; restarts the server on any .py change, plus

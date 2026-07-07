@@ -7,12 +7,22 @@ import os
 
 import json
 import time
+import hashlib
+
+# parse cache keyed by the PDF's content hash (not its path) — every upload
+# lands at a fresh uploads/{uuid}.pdf, so a path key would miss on re-upload of
+# the same file and re-hit the LLM. Content hash makes the same bytes free.
 store = {
 }
 
 def get_text_from_pdf(pdf_path):
     text = extract_text(pdf_path)
     return text
+
+
+def _file_hash(pdf_path: str) -> str:
+    with open(pdf_path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
 
 
 @dataclass
@@ -106,14 +116,17 @@ MIN_RESUME_TEXT_CHARS = 80
 
 
 def _parse_raw(pdf_path: str, llm: Any, text: str | None = None) -> dict:
-    """Run (and cache) the structured parse, returning the raw JSON dict."""
-    if pdf_path in store:
-        return store[pdf_path]
+    """Run (and cache) the structured parse, returning the raw JSON dict.
+    Cache is keyed by content hash so the same PDF re-uploaded under a new
+    path is free."""
+    key = _file_hash(pdf_path)
+    if key in store:
+        return store[key]
     if text is None:
         text = get_text_from_pdf(pdf_path)
     response = llm.complete(prompt=text, system=SYSTEM_PROMPT, response_schema=_ResumeSchema)
     data = json.loads(response)
-    store[pdf_path] = data
+    store[key] = data
     return data
 
 
