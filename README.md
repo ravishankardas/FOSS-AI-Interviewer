@@ -1,5 +1,7 @@
 # FinalRound
 
+**🎙 [Try the live demo →](https://finalround.up.railway.app/)**
+
 An open-source, voice-based AI interviewer. It parses a candidate's resume,
 conducts a spoken interview over a **STT → LLM → TTS** pipeline, and produces a
 structured hiring report at the end.
